@@ -23,6 +23,42 @@
     margin: 0 auto;
     padding: 16px;
   }
+  .request-card {
+    background: #221a30;
+    border: 1px solid #4a3a6a;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .request-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .request-name { font-weight: 700; font-size: 1rem; }
+  .request-meta { font-size: 0.78rem; color: #b3a8d0; margin-bottom: 10px; }
+  .request-actions { display: flex; gap: 8px; }
+  .request-actions button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  .btn-approve { background: #245c3a; color: #d9ffe6; }
+  .btn-reject { background: #6e2424; color: #ffd9d9; }
+  .pulse-badge {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #c084fc;
+    margin-right: 6px;
+    animation: pulse 1.2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
   .section-title {
     font-size: 0.85rem;
     color: #9a8f80;
@@ -143,6 +179,9 @@
 </header>
 
 <main>
+  <div class="section-title">⏳ Menunggu Persetujuan Login</div>
+  <div id="request-list"></div>
+
   <div class="section-title">Device Belum Dikembalikan</div>
   <div id="flagged-list"></div>
 
@@ -285,16 +324,74 @@ function renderUsers(users) {
   }).join('');
 }
 
+async function approveRequest(deviceId, barcode, name) {
+  try {
+    await fetch(`${DATABASE_URL}/requests/${deviceId}.json`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'approved' })
+    });
+    showToast(`✅ Disetujui: ${name} (${barcode}) untuk ${deviceId}`);
+    fetchAll();
+  } catch (err) {
+    showToast('Gagal: ' + err.message);
+  }
+}
+
+async function rejectRequest(deviceId, name) {
+  try {
+    await fetch(`${DATABASE_URL}/requests/${deviceId}.json`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'rejected' })
+    });
+    showToast(`❌ Ditolak: ${name} untuk ${deviceId}`);
+    fetchAll();
+  } catch (err) {
+    showToast('Gagal: ' + err.message);
+  }
+}
+
+function renderRequests(requests) {
+  const div = document.getElementById('request-list');
+  const ids = Object.keys(requests || {});
+  const pending = ids.filter(id => (requests[id] || {}).status === 'pending');
+
+  if (pending.length === 0) {
+    div.innerHTML = '<div class="empty">Tidak ada permintaan login menunggu.</div>';
+    return;
+  }
+
+  div.innerHTML = pending.map(deviceId => {
+    const r = requests[deviceId];
+    return `
+      <div class="request-card">
+        <div class="request-top">
+          <div class="request-name"><span class="pulse-badge"></span>${r.name || r.barcode}</div>
+        </div>
+        <div class="request-meta">Barcode: ${r.barcode} · Minta akses: <b>${deviceId}</b> · ${fmtTime(r.requested_at)}</div>
+        <div class="request-actions">
+          <button class="btn-approve" onclick="approveRequest('${deviceId}','${r.barcode}','${r.name || r.barcode}')">✅ Setujui</button>
+          <button class="btn-reject" onclick="rejectRequest('${deviceId}','${r.name || r.barcode}')">❌ Tolak</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
 async function fetchAll() {
   try {
-    const [devRes, userRes] = await Promise.all([
+    const [devRes, userRes, reqRes] = await Promise.all([
       fetch(`${DATABASE_URL}/devices.json`),
-      fetch(`${DATABASE_URL}/users.json`)
+      fetch(`${DATABASE_URL}/users.json`),
+      fetch(`${DATABASE_URL}/requests.json`)
     ]);
     const devices = devRes.ok ? await devRes.json() : {};
     const users = userRes.ok ? await userRes.json() : {};
+    const requests = reqRes.ok ? await reqRes.json() : {};
     document.getElementById('last-update').textContent =
       'Update terakhir: ' + new Date().toLocaleTimeString('id-ID');
+    renderRequests(requests);
     renderDevices(devices);
     renderUsers(users);
   } catch (err) {
