@@ -3,9 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KunciPDA — Admin Monitoring</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<title>KunciPDA — Admin Dashboard</title>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -17,262 +15,295 @@
   header {
     background: linear-gradient(90deg, #a9651f, #7c4413);
     padding: 16px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 8px;
   }
-  header h1 {
-    margin: 0;
-    font-size: 1.25rem;
-    letter-spacing: 0.2px;
+  header h1 { margin: 0; font-size: 1.2rem; }
+  header .sub { font-size: 0.78rem; opacity: 0.85; margin-top: 2px; }
+  main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 16px;
   }
-  header .meta {
-    font-size: 0.8rem;
-    opacity: 0.85;
-  }
-  #layout {
-    display: flex;
-    flex-direction: column;
-    height: calc(100vh - 64px);
-  }
-  @media (min-width: 900px) {
-    #layout { flex-direction: row; }
-  }
-  #map {
-    flex: 1;
-    min-height: 320px;
-    background: #1c1916;
-  }
-  #sidebar {
-    width: 100%;
-    max-width: 100%;
-    overflow-y: auto;
-    background: #1c1815;
-    border-top: 1px solid #3a322a;
-    padding: 12px;
-  }
-  @media (min-width: 900px) {
-    #sidebar {
-      width: 340px;
-      border-top: none;
-      border-left: 1px solid #3a322a;
-    }
+  .section-title {
+    font-size: 0.85rem;
+    color: #9a8f80;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 18px 4px 8px;
   }
   .device-card {
-    background: #23201b;
+    background: #1c1815;
     border: 1px solid #3a322a;
-    border-radius: 10px;
-    padding: 12px 14px;
+    border-radius: 12px;
+    padding: 14px 16px;
     margin-bottom: 10px;
-    cursor: pointer;
-    transition: border-color 0.15s;
   }
-  .device-card:hover {
-    border-color: #d98e3f;
+  .device-card.flag {
+    border-color: #8a5a24;
+    background: #221a12;
   }
-  .device-card.active {
-    border-color: #e0a64f;
-    background: #2a2319;
-  }
-  .device-card .name {
-    font-weight: 600;
-    font-size: 0.98rem;
-    margin-bottom: 4px;
-  }
-  .row {
+  .device-top {
     display: flex;
     justify-content: space-between;
-    font-size: 0.8rem;
-    color: #c9bfb2;
-    margin-top: 2px;
+    align-items: center;
+    margin-bottom: 8px;
   }
+  .device-id { font-weight: 700; font-size: 1.02rem; }
   .badge {
     display: inline-block;
-    padding: 2px 8px;
+    padding: 3px 10px;
     border-radius: 999px;
-    font-size: 0.7rem;
+    font-size: 0.72rem;
     font-weight: 600;
   }
   .badge.available { background: #245c3a; color: #b9f3cf; }
   .badge.inuse { background: #5c4a24; color: #f3dfb9; }
-  .badge.offline { background: #5c2424; color: #f3b9b9; }
-  .status-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    display: inline-block; margin-right: 6px;
+  .badge.locked { background: #5c2424; color: #f3b9b9; }
+  .badge.lost { background: #5c2424; color: #f3b9b9; }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.83rem;
+    color: #c9bfb2;
+    margin-top: 3px;
   }
-  #empty-msg {
-    color: #9a8f80;
+  .row b { color: #f2ece4; }
+  .holder-banner {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: #2a2014;
+    border-radius: 8px;
     font-size: 0.85rem;
-    padding: 12px;
-    line-height: 1.5;
+    color: #e0a64f;
   }
+  .actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .actions button {
+    flex: 1;
+    padding: 9px 10px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.82rem;
+    cursor: pointer;
+  }
+  .btn-lock { background: #6e2424; color: #ffd9d9; }
+  .btn-unlock { background: #245c3a; color: #d9ffe6; }
+  .btn-checkin { background: #2a4a5c; color: #d9eeff; }
+  .pending-tag {
+    font-size: 0.7rem;
+    color: #e0a64f;
+    margin-top: 6px;
+  }
+  .user-row {
+    display: flex;
+    justify-content: space-between;
+    background: #1c1815;
+    border: 1px solid #3a322a;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 6px;
+    font-size: 0.85rem;
+  }
+  .user-row .name { font-weight: 600; }
+  .user-row .device { color: #9a8f80; }
+  .empty { color: #8a7f80; font-size: 0.85rem; padding: 10px 4px; }
   .refresh-info {
+    text-align: center;
     font-size: 0.72rem;
     color: #8a7f70;
-    margin-top: 10px;
-    text-align: center;
+    margin-top: 20px;
+    padding-bottom: 20px;
   }
-  .leaflet-popup-content { font-size: 0.85rem; line-height: 1.4; }
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2a2319;
+    border: 1px solid #5a4628;
+    color: #f2ece4;
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>📍 KunciPDA — Monitoring Lokasi Device</h1>
-  <div class="meta" id="last-update">Memuat data...</div>
+  <h1>🔐 KunciPDA — Admin Dashboard</h1>
+  <div class="sub" id="last-update">Memuat data...</div>
 </header>
 
-<div id="layout">
-  <div id="map"></div>
-  <div id="sidebar">
-    <div id="device-list"></div>
-    <div id="empty-msg" style="display:none;">
-      Tidak ada device ditemukan, atau akses dibaca ditolak oleh Firebase Rules.
-      Pastikan path <b>/devices</b> bisa dibaca publik, atau tambahkan autentikasi.
-    </div>
-    <div class="refresh-info">Auto-refresh setiap 5 detik</div>
-  </div>
-</div>
+<main>
+  <div class="section-title">Device Belum Dikembalikan</div>
+  <div id="flagged-list"></div>
+
+  <div class="section-title">Semua Device</div>
+  <div id="device-list"></div>
+
+  <div class="section-title">Daftar Staff</div>
+  <div id="user-list"></div>
+
+  <div class="refresh-info">Auto-refresh setiap 5 detik</div>
+</main>
+
+<div class="toast" id="toast"></div>
 
 <script>
-// ====== KONFIGURASI ======
 const DATABASE_URL = "https://kuncipda-default-rtdb.asia-southeast1.firebasedatabase.app";
 const REFRESH_MS = 5000;
-// ==========================
 
-const map = L.map('map').setView([-2.5, 118], 5); // default: tengah Indonesia
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap contributors',
-  maxZoom: 19
-}).addTo(map);
-
-const markers = {};
-let activeDeviceId = null;
-let firstLoad = true;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
 
 function statusBadgeClass(status) {
-  if (!status) return 'offline';
+  if (!status) return 'available';
   const s = status.toLowerCase();
-  if (s.includes('available')) return 'available';
-  if (s.includes('use') || s.includes('progress')) return 'inuse';
-  return 'offline';
+  if (s.includes('use')) return 'inuse';
+  if (s.includes('lock')) return 'locked';
+  if (s.includes('lost')) return 'lost';
+  return 'available';
 }
 
 function fmtTime(ts) {
   if (!ts || ts === 0) return '-';
-  try {
-    const d = new Date(Number(ts));
-    if (isNaN(d.getTime()) || d.getFullYear() < 2000) return '-';
-    return d.toLocaleString('id-ID');
-  } catch(e) { return '-'; }
+  const d = new Date(Number(ts));
+  if (isNaN(d.getTime()) || d.getFullYear() < 2000) return '-';
+  return d.toLocaleString('id-ID');
 }
 
-function renderSidebar(devices) {
-  const list = document.getElementById('device-list');
-  const emptyMsg = document.getElementById('empty-msg');
+async function sendCommand(deviceId, action) {
+  try {
+    const res = await fetch(`${DATABASE_URL}/devices/${deviceId}/command.json`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: action, executed: false })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    showToast(`Perintah "${action}" terkirim ke ${deviceId}`);
+    fetchAll();
+  } catch (err) {
+    showToast('Gagal kirim perintah: ' + err.message);
+  }
+}
+
+async function forceCheckin(deviceId) {
+  try {
+    await fetch(`${DATABASE_URL}/devices/${deviceId}/status.json`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ current_status: 'AVAILABLE', current_user: '' })
+    });
+    showToast(`${deviceId} ditandai sudah dikembalikan`);
+    fetchAll();
+  } catch (err) {
+    showToast('Gagal: ' + err.message);
+  }
+}
+
+function renderDevices(devices) {
   const ids = Object.keys(devices || {});
+  const flaggedDiv = document.getElementById('flagged-list');
+  const listDiv = document.getElementById('device-list');
 
   if (ids.length === 0) {
-    list.innerHTML = '';
-    emptyMsg.style.display = 'block';
+    flaggedDiv.innerHTML = '<div class="empty">Belum ada device.</div>';
+    listDiv.innerHTML = '';
     return;
   }
-  emptyMsg.style.display = 'none';
 
-  list.innerHTML = ids.map(id => {
+  const flagged = [];
+  const normal = [];
+
+  ids.forEach(id => {
     const d = devices[id] || {};
-    const info = d.info || {};
     const status = d.status || {};
-    const loc = d.location || {};
-    const cls = statusBadgeClass(status.current_status);
-    const isActive = id === activeDeviceId ? 'active' : '';
+    const command = d.command || {};
+    const isInUse = (status.current_status || '').toUpperCase() === 'IN_USE';
+    const pendingCmd = command.action && command.action !== 'NONE' && command.executed === false;
+
+    const cardHtml = (flaggedStyle) => `
+      <div class="device-card ${flaggedStyle ? 'flag' : ''}">
+        <div class="device-top">
+          <div class="device-id">${id}</div>
+          <span class="badge ${statusBadgeClass(status.current_status)}">${status.current_status || 'UNKNOWN'}</span>
+        </div>
+        <div class="row"><span>Asset</span><b>${(d.info || {}).asset_tag || '-'}</b></div>
+        <div class="row"><span>Model</span><b>${(d.info || {}).model || '-'}</b></div>
+        <div class="row"><span>Battery</span><b>${status.battery_level != null ? status.battery_level + '%' : '-'}</b></div>
+        <div class="row"><span>Last seen</span><b>${fmtTime(status.last_seen)}</b></div>
+        ${isInUse ? `<div class="holder-banner">📌 Sedang dipegang: <b>${status.current_user || 'tidak diketahui'}</b></div>` : ''}
+        ${pendingCmd ? `<div class="pending-tag">⏳ Perintah "${command.action}" menunggu dieksekusi device...</div>` : ''}
+        <div class="actions">
+          <button class="btn-lock" onclick="sendCommand('${id}','LOCK')">🔒 Lock</button>
+          <button class="btn-unlock" onclick="sendCommand('${id}','UNLOCK')">🔓 Unlock</button>
+          ${isInUse ? `<button class="btn-checkin" onclick="forceCheckin('${id}')">↩️ Tandai Kembali</button>` : ''}
+        </div>
+      </div>
+    `;
+
+    if (isInUse) flagged.push(cardHtml(true));
+    normal.push(cardHtml(false));
+  });
+
+  flaggedDiv.innerHTML = flagged.length
+    ? flagged.join('')
+    : '<div class="empty">✅ Semua device sudah dikembalikan.</div>';
+  listDiv.innerHTML = normal.join('');
+}
+
+function renderUsers(users) {
+  const ids = Object.keys(users || {});
+  const div = document.getElementById('user-list');
+  if (ids.length === 0) {
+    div.innerHTML = '<div class="empty">Belum ada staff.</div>';
+    return;
+  }
+  div.innerHTML = ids.map(id => {
+    const u = users[id] || {};
     return `
-      <div class="device-card ${isActive}" data-id="${id}" onclick="focusDevice('${id}')">
-        <div class="name">${id} <span class="badge ${cls}">${status.current_status || 'UNKNOWN'}</span></div>
-        <div class="row"><span>Asset</span><span>${info.asset_tag || '-'}</span></div>
-        <div class="row"><span>Model</span><span>${info.model || '-'}</span></div>
-        <div class="row"><span>Battery</span><span>${status.battery_level != null ? status.battery_level + '%' : '-'}</span></div>
-        <div class="row"><span>Lat / Lng</span><span>${loc.lat != null ? Number(loc.lat).toFixed(6) : '-'}, ${loc.lng != null ? Number(loc.lng).toFixed(6) : '-'}</span></div>
-        <div class="row"><span>User</span><span>${status.current_user || '-'}</span></div>
+      <div class="user-row">
+        <div>
+          <div class="name">${u.name || id} <span style="color:#8a7f80;font-size:0.75rem;">(${id})</span></div>
+          <div class="device">${u.role || '-'} · ${u.status || '-'}</div>
+        </div>
+        <div class="device">${u.active_device ? '📱 ' + u.active_device : 'Tidak pegang device'}</div>
       </div>
     `;
   }).join('');
 }
 
-function renderMarkers(devices) {
-  const ids = Object.keys(devices || {});
-  const seen = new Set();
-
-  ids.forEach(id => {
-    const d = devices[id] || {};
-    const loc = d.location || {};
-    const lat = parseFloat(loc.lat);
-    const lng = parseFloat(loc.lng);
-    if (!isFinite(lat) || !isFinite(lng) || (lat === 0 && lng === 0)) return; // belum ada fix GPS
-
-    seen.add(id);
-    const info = d.info || {};
-    const status = d.status || {};
-    const popupHtml = `
-      <b>${id}</b><br>
-      Asset: ${info.asset_tag || '-'}<br>
-      Status: ${status.current_status || '-'}<br>
-      Battery: ${status.battery_level != null ? status.battery_level + '%' : '-'}<br>
-      Update: ${fmtTime(loc.updated_at)}
-    `;
-
-    if (markers[id]) {
-      markers[id].setLatLng([lat, lng]);
-      markers[id].setPopupContent(popupHtml);
-    } else {
-      markers[id] = L.marker([lat, lng]).addTo(map).bindPopup(popupHtml);
-    }
-  });
-
-  // hapus marker device yang sudah tidak ada / tidak punya lokasi valid
-  Object.keys(markers).forEach(id => {
-    if (!seen.has(id)) {
-      map.removeLayer(markers[id]);
-      delete markers[id];
-    }
-  });
-
-  if (firstLoad && seen.size > 0) {
-    const group = L.featureGroup(Object.values(markers));
-    map.fitBounds(group.getBounds().pad(0.3));
-    firstLoad = false;
-  }
-}
-
-window.focusDevice = function(id) {
-  activeDeviceId = id;
-  if (markers[id]) {
-    map.setView(markers[id].getLatLng(), 16);
-    markers[id].openPopup();
-  }
-};
-
-async function fetchDevices() {
+async function fetchAll() {
   try {
-    const res = await fetch(`${DATABASE_URL}/devices.json`);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
+    const [devRes, userRes] = await Promise.all([
+      fetch(`${DATABASE_URL}/devices.json`),
+      fetch(`${DATABASE_URL}/users.json`)
+    ]);
+    const devices = devRes.ok ? await devRes.json() : {};
+    const users = userRes.ok ? await userRes.json() : {};
     document.getElementById('last-update').textContent =
       'Update terakhir: ' + new Date().toLocaleTimeString('id-ID');
-    renderSidebar(data || {});
-    renderMarkers(data || {});
+    renderDevices(devices);
+    renderUsers(users);
   } catch (err) {
     document.getElementById('last-update').textContent = 'Gagal memuat data: ' + err.message;
-    document.getElementById('empty-msg').style.display = 'block';
-    document.getElementById('empty-msg').textContent =
-      'Gagal mengambil data dari Firebase. Cek koneksi internet atau Firebase Rules (akses baca mungkin ditolak).';
   }
 }
 
-fetchDevices();
-setInterval(fetchDevices, REFRESH_MS);
+fetchAll();
+setInterval(fetchAll, REFRESH_MS);
 </script>
 
 </body>
