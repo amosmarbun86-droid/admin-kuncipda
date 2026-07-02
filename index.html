@@ -324,28 +324,35 @@ function renderUsers(users) {
   }).join('');
 }
 
-async function approveRequest(deviceId, barcode, name) {
+async function approveRequest(reqId, deviceId, employeeId, name) {
   try {
-    await fetch(`${DATABASE_URL}/requests/${deviceId}.json`, {
+    // 1. Update status request
+    await fetch(`${DATABASE_URL}/requests/${reqId}.json`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'approved' })
     });
-    showToast(`✅ Disetujui: ${name} (${barcode}) untuk ${deviceId}`);
+    // 2. Update status device
+    await fetch(`${DATABASE_URL}/devices/${deviceId}/status.json`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ current_status: 'IN_USE', current_user: name })
+    });
+    showToast(`✅ Disetujui: ${name} (${employeeId}) untuk ${deviceId}`);
     fetchAll();
   } catch (err) {
     showToast('Gagal: ' + err.message);
   }
 }
 
-async function rejectRequest(deviceId, name) {
+async function rejectRequest(reqId, name) {
   try {
-    await fetch(`${DATABASE_URL}/requests/${deviceId}.json`, {
+    await fetch(`${DATABASE_URL}/requests/${reqId}.json`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'rejected' })
     });
-    showToast(`❌ Ditolak: ${name} untuk ${deviceId}`);
+    showToast(`❌ Ditolak: ${name}`);
     fetchAll();
   } catch (err) {
     showToast('Gagal: ' + err.message);
@@ -362,17 +369,17 @@ function renderRequests(requests) {
     return;
   }
 
-  div.innerHTML = pending.map(deviceId => {
-    const r = requests[deviceId];
+  div.innerHTML = pending.map(reqId => {
+    const r = requests[reqId];
     return `
       <div class="request-card">
         <div class="request-top">
-          <div class="request-name"><span class="pulse-badge"></span>${r.name || r.barcode}</div>
+          <div class="request-name"><span class="pulse-badge"></span>${r.name || 'Staff'}</div>
         </div>
-        <div class="request-meta">Barcode: ${r.barcode} · Minta akses: <b>${deviceId}</b> · ${fmtTime(r.requested_at)}</div>
+        <div class="request-meta">ID Karyawan: ${r.employeeId} · Minta akses: <b>${r.deviceId}</b> · ${fmtTime(r.requested_at)}</div>
         <div class="request-actions">
-          <button class="btn-approve" onclick="approveRequest('${deviceId}','${r.barcode}','${r.name || r.barcode}')">✅ Setujui</button>
-          <button class="btn-reject" onclick="rejectRequest('${deviceId}','${r.name || r.barcode}')">❌ Tolak</button>
+          <button class="btn-approve" onclick="approveRequest('${reqId}','${r.deviceId}','${r.employeeId}','${r.name}')">✅ Setujui</button>
+          <button class="btn-reject" onclick="rejectRequest('${reqId}','${r.name}')">❌ Tolak</button>
         </div>
       </div>
     `;
