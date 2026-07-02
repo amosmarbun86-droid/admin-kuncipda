@@ -1,414 +1,220 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KunciPDA — Admin Dashboard</title>
-<style>
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-    background: #14110f;
-    color: #f2ece4;
-  }
-  header {
-    background: linear-gradient(90deg, #a9651f, #7c4413);
-    padding: 16px 20px;
-  }
-  header h1 { margin: 0; font-size: 1.2rem; }
-  header .sub { font-size: 0.78rem; opacity: 0.85; margin-top: 2px; }
-  main {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 16px;
-  }
-  .request-card {
-    background: #221a30;
-    border: 1px solid #4a3a6a;
-    border-radius: 12px;
-    padding: 14px 16px;
-    margin-bottom: 10px;
-  }
-  .request-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 6px;
-  }
-  .request-name { font-weight: 700; font-size: 1rem; }
-  .request-meta { font-size: 0.78rem; color: #b3a8d0; margin-bottom: 10px; }
-  .request-actions { display: flex; gap: 8px; }
-  .request-actions button {
-    flex: 1;
-    padding: 10px;
-    border: none;
-    border-radius: 8px;
-    font-weight: 700;
-    font-size: 0.85rem;
-    cursor: pointer;
-  }
-  .btn-approve { background: #245c3a; color: #d9ffe6; }
-  .btn-reject { background: #6e2424; color: #ffd9d9; }
-  .pulse-badge {
-    display: inline-block;
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: #c084fc;
-    margin-right: 6px;
-    animation: pulse 1.2s infinite;
-  }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-  .section-title {
-    font-size: 0.85rem;
-    color: #9a8f80;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin: 18px 4px 8px;
-  }
-  .device-card {
-    background: #1c1815;
-    border: 1px solid #3a322a;
-    border-radius: 12px;
-    padding: 14px 16px;
-    margin-bottom: 10px;
-  }
-  .device-card.flag {
-    border-color: #8a5a24;
-    background: #221a12;
-  }
-  .device-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-  }
-  .device-id { font-weight: 700; font-size: 1.02rem; }
-  .badge {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 999px;
-    font-size: 0.72rem;
-    font-weight: 600;
-  }
-  .badge.available { background: #245c3a; color: #b9f3cf; }
-  .badge.inuse { background: #5c4a24; color: #f3dfb9; }
-  .badge.locked { background: #5c2424; color: #f3b9b9; }
-  .badge.lost { background: #5c2424; color: #f3b9b9; }
-  .row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.83rem;
-    color: #c9bfb2;
-    margin-top: 3px;
-  }
-  .row b { color: #f2ece4; }
-  .holder-banner {
-    margin-top: 8px;
-    padding: 8px 10px;
-    background: #2a2014;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    color: #e0a64f;
-  }
-  .actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
-  }
-  .actions button {
-    flex: 1;
-    padding: 9px 10px;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.82rem;
-    cursor: pointer;
-  }
-  .btn-lock { background: #6e2424; color: #ffd9d9; }
-  .btn-unlock { background: #245c3a; color: #d9ffe6; }
-  .btn-checkin { background: #2a4a5c; color: #d9eeff; }
-  .pending-tag {
-    font-size: 0.7rem;
-    color: #e0a64f;
-    margin-top: 6px;
-  }
-  .user-row {
-    display: flex;
-    justify-content: space-between;
-    background: #1c1815;
-    border: 1px solid #3a322a;
-    border-radius: 10px;
-    padding: 10px 14px;
-    margin-bottom: 6px;
-    font-size: 0.85rem;
-  }
-  .user-row .name { font-weight: 600; }
-  .user-row .device { color: #9a8f80; }
-  .empty { color: #8a7f80; font-size: 0.85rem; padding: 10px 4px; }
-  .refresh-info {
-    text-align: center;
-    font-size: 0.72rem;
-    color: #8a7f70;
-    margin-top: 20px;
-    padding-bottom: 20px;
-  }
-  .toast {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #2a2319;
-    border: 1px solid #5a4628;
-    color: #f2ece4;
-    padding: 10px 18px;
-    border-radius: 999px;
-    font-size: 0.82rem;
-    opacity: 0;
-    transition: opacity 0.2s;
-    pointer-events: none;
-  }
-  .toast.show { opacity: 1; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KunciPDA - Admin Dashboard</title>
+  <style>
+    :root {
+      --bg-main: #0f172a;
+      --bg-card: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --accent-blue: #3b82f6;
+      --border: #334155;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: var(--bg-main); color: var(--text-main); padding: 20px; }
+    header { margin-bottom: 30px; text-align: center; }
+    h1 { font-size: 24px; font-weight: 600; margin-bottom: 5px; color: var(--text-main); }
+    p.subtitle { color: var(--text-muted); font-size: 14px; }
+    .dashboard-grid { display: grid; grid-template-columns: 1fr; gap: 20px; max-width: 1200px; margin: 0 auto; }
+    @media (min-width: 768px) { .dashboard-grid { grid-template-columns: 1fr 1fr; } }
+    .section-title { font-size: 16px; font-weight: 600; margin-bottom: 15px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .card-container { display: flex; flex-direction: column; gap: 15px; }
+    .device-card, .request-card { background-color: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+    .device-top, .request-top { display: flex; justify-content: space-between; align-items: center; }
+    .device-name, .request-name { font-weight: 600; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+    .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+    .badge-available { background-color: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+    .badge-inuse { background-color: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
+    .device-meta, .request-meta { font-size: 14px; color: var(--text-muted); line-height: 1.5; }
+    .request-actions { display: flex; gap: 10px; margin-top: 5px; }
+    button { padding: 10px 16px; border: none; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: opacity 0.2s; display: flex; align-items: center; gap: 6px; }
+    button:hover { opacity: 0.9; }
+    .btn-approve { background-color: var(--accent-green); color: white; width: 100%; justify-content: center; }
+    .btn-reject { background-color: var(--accent-red); color: white; width: 100%; justify-content: center; }
+    .empty { text-align: center; color: var(--text-muted); padding: 30px; background-color: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed var(--border); font-size: 14px; }
+    .pulse-badge { width: 8px; height: 8px; background-color: #f59e0b; border-radius: 50%; display: inline-block; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
+    #toast { position: fixed; bottom: 20px; right: 20px; background: #334155; color: #fff; padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-size: 14px; display: none; z-index: 1000; border-left: 4px solid var(--accent-blue); }
+  </style>
 </head>
 <body>
 
-<header>
-  <h1>🔐 KunciPDA — Admin Dashboard</h1>
-  <div class="sub" id="last-update">Memuat data...</div>
-</header>
+  <header>
+    <h1>KunciPDA — Admin Dashboard</h1>
+    <p class="subtitle">Sistem Pemantauan & Otorisasi Perangkat Real-time</p>
+  </header>
 
-<main>
-  <div class="section-title">⏳ Menunggu Persetujuan Login</div>
-  <div id="request-list"></div>
-
-  <div class="section-title">Device Belum Dikembalikan</div>
-  <div id="flagged-list"></div>
-
-  <div class="section-title">Semua Device</div>
-  <div id="device-list"></div>
-
-  <div class="section-title">Daftar Staff</div>
-  <div id="user-list"></div>
-
-  <div class="refresh-info">Auto-refresh setiap 5 detik</div>
-</main>
-
-<div class="toast" id="toast"></div>
-
-<script>
-const DATABASE_URL = "https://kuncipda-default-rtdb.asia-southeast1.firebasedatabase.app";
-const REFRESH_MS = 5000;
-
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
-}
-
-function statusBadgeClass(status) {
-  if (!status) return 'available';
-  const s = status.toLowerCase();
-  if (s.includes('use')) return 'inuse';
-  if (s.includes('lock')) return 'locked';
-  if (s.includes('lost')) return 'lost';
-  return 'available';
-}
-
-function fmtTime(ts) {
-  if (!ts || ts === 0) return '-';
-  const d = new Date(Number(ts));
-  if (isNaN(d.getTime()) || d.getFullYear() < 2000) return '-';
-  return d.toLocaleString('id-ID');
-}
-
-async function sendCommand(deviceId, action) {
-  try {
-    const res = await fetch(`${DATABASE_URL}/devices/${deviceId}/command.json`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: action, executed: false })
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    showToast(`Perintah "${action}" terkirim ke ${deviceId}`);
-    fetchAll();
-  } catch (err) {
-    showToast('Gagal kirim perintah: ' + err.message);
-  }
-}
-
-async function forceCheckin(deviceId) {
-  try {
-    await fetch(`${DATABASE_URL}/devices/${deviceId}/status.json`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ current_status: 'AVAILABLE', current_user: '' })
-    });
-    showToast(`${deviceId} ditandai sudah dikembalikan`);
-    fetchAll();
-  } catch (err) {
-    showToast('Gagal: ' + err.message);
-  }
-}
-
-function renderDevices(devices) {
-  const ids = Object.keys(devices || {});
-  const flaggedDiv = document.getElementById('flagged-list');
-  const listDiv = document.getElementById('device-list');
-
-  if (ids.length === 0) {
-    flaggedDiv.innerHTML = '<div class="empty">Belum ada device.</div>';
-    listDiv.innerHTML = '';
-    return;
-  }
-
-  const flagged = [];
-  const normal = [];
-
-  ids.forEach(id => {
-    const d = devices[id] || {};
-    const status = d.status || {};
-    const command = d.command || {};
-    const isInUse = (status.current_status || '').toUpperCase() === 'IN_USE';
-    const pendingCmd = command.action && command.action !== 'NONE' && command.executed === false;
-
-    const cardHtml = (flaggedStyle) => `
-      <div class="device-card ${flaggedStyle ? 'flag' : ''}">
-        <div class="device-top">
-          <div class="device-id">${id}</div>
-          <span class="badge ${statusBadgeClass(status.current_status)}">${status.current_status || 'UNKNOWN'}</span>
-        </div>
-        <div class="row"><span>Asset</span><b>${(d.info || {}).asset_tag || '-'}</b></div>
-        <div class="row"><span>Model</span><b>${(d.info || {}).model || '-'}</b></div>
-        <div class="row"><span>Battery</span><b>${status.battery_level != null ? status.battery_level + '%' : '-'}</b></div>
-        <div class="row"><span>Last seen</span><b>${fmtTime(status.last_seen)}</b></div>
-        ${isInUse ? `<div class="holder-banner">📌 Sedang dipegang: <b>${status.current_user || 'tidak diketahui'}</b></div>` : ''}
-        ${pendingCmd ? `<div class="pending-tag">⏳ Perintah "${command.action}" menunggu dieksekusi device...</div>` : ''}
-        <div class="actions">
-          <button class="btn-lock" onclick="sendCommand('${id}','LOCK')">🔒 Lock</button>
-          <button class="btn-unlock" onclick="sendCommand('${id}','UNLOCK')">🔓 Unlock</button>
-          ${isInUse ? `<button class="btn-checkin" onclick="forceCheckin('${id}')">↩️ Tandai Kembali</button>` : ''}
-        </div>
+  <main class="dashboard-grid">
+    <div>
+      <div class="section-title">Status Perangkat PDA</div>
+      <div id="device-list" class="card-container">
+        <div class="empty">Memuat data perangkat...</div>
       </div>
-    `;
+    </div>
 
-    if (isInUse) flagged.push(cardHtml(true));
-    normal.push(cardHtml(false));
-  });
-
-  flaggedDiv.innerHTML = flagged.length
-    ? flagged.join('')
-    : '<div class="empty">✅ Semua device sudah dikembalikan.</div>';
-  listDiv.innerHTML = normal.join('');
-}
-
-function renderUsers(users) {
-  const ids = Object.keys(users || {});
-  const div = document.getElementById('user-list');
-  if (ids.length === 0) {
-    div.innerHTML = '<div class="empty">Belum ada staff.</div>';
-    return;
-  }
-  div.innerHTML = ids.map(id => {
-    const u = users[id] || {};
-    return `
-      <div class="user-row">
-        <div>
-          <div class="name">${u.name || id} <span style="color:#8a7f80;font-size:0.75rem;">(${id})</span></div>
-          <div class="device">${u.role || '-'} · ${u.status || '-'}</div>
-        </div>
-        <div class="device">${u.active_device ? '📱 ' + u.active_device : 'Tidak pegang device'}</div>
+    <div>
+      <div class="section-title">Permintaan Akses Masuk</div>
+      <div id="request-list" class="card-container">
+        <div class="empty">Memuat permintaan masuk...</div>
       </div>
-    `;
-  }).join('');
-}
+    </div>
+  </main>
 
-async function approveRequest(reqId, deviceId, employeeId, name) {
-  try {
-    // 1. Update status request
-    await fetch(`${DATABASE_URL}/requests/${reqId}.json`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'approved' })
-    });
-    // 2. Update status device
-    await fetch(`${DATABASE_URL}/devices/${deviceId}/status.json`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ current_status: 'IN_USE', current_user: name })
-    });
-    showToast(`✅ Disetujui: ${name} (${employeeId}) untuk ${deviceId}`);
+  <div id="toast">Notifikasi</div>
+
+  <script>
+    // URL database Firebase Realtime Anda (Disamakan dari file proyek lama)
+    const DATABASE_URL = "https://kuncipda-default-rtdb.asia-southeast1.firebasedatabase.app";
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 3000);
+    }
+
+    function fmtTime(ts) {
+      if (!ts || ts === "0" || ts === 0) return 'Belum tercatat';
+      try {
+        const d = new Date(parseInt(ts));
+        if(isNaN(d.getTime())) return 'Format waktu salah';
+        return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+      } catch(e) {
+        return 'Waktu tidak valid';
+      }
+    }
+
+    // Fungsi fetch utama untuk membaca seluruh data Firebase
+    async function fetchAll() {
+      try {
+        const res = await fetch(`${DATABASE_URL}/.json`);
+        const data = await res.json() || {};
+        renderDevices(data.devices || {});
+        renderRequests(data.requests || {});
+      } catch (err) {
+        console.error("Gagal memuat data dari Firebase:", err);
+        showToast("Koneksi Firebase bermasalah");
+      }
+    }
+
+    function renderDevices(devices) {
+      const div = document.getElementById('device-list');
+      const devIds = Object.keys(devices);
+
+      if (devIds.length === 0) {
+        div.innerHTML = '<div class="empty">Tidak ada perangkat terdaftar di database.</div>';
+        return;
+      }
+
+      div.innerHTML = devIds.map(id => {
+        const dev = devices[id];
+        const status = dev.status || {};
+        const info = dev.info || {};
+        
+        const isAvailable = status.current_status === 'AVAILABLE';
+        const badgeClass = isAvailable ? 'badge-available' : 'badge-inuse';
+        const labelStatus = isAvailable ? 'Tersedia' : 'Sedang Digunakan';
+        const holderText = isAvailable ? 'Siap digunakan oleh staff' : `📌 Dipegang oleh: <b>${status.current_user || 'Staff'}</b>`;
+
+        return `
+          <div class="device-card">
+            <div class="device-top">
+              <div class="device-name">📱 ${id}</div>
+              <span class="badge ${badgeClass}">${labelStatus}</span>
+            </div>
+            <div class="device-meta">
+              Model: ${info.model || 'Tidak Diketahui'} · Tag: ${info.asset_tag || '-'}<br>
+              Baterai: 🔋 ${status.battery_level || '0'}%<br>
+              ${holderText}<br>
+              <small style="color: var(--text-muted)">Aktif Terakhir: ${fmtTime(status.last_seen)}</small>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderRequests(requests) {
+      const div = document.getElementById('request-list');
+      const reqIds = Object.keys(requests).filter(id => id !== 'init');
+      const pending = reqIds.filter(id => (requests[id] || {}).status === 'pending');
+
+      if (pending.length === 0) {
+        div.innerHTML = '<div class="empty">Tidak ada permintaan login menunggu.</div>';
+        return;
+      }
+
+      div.innerHTML = pending.map(reqId => {
+        const r = requests[reqId];
+        return `
+          <div class="request-card">
+            <div class="request-top">
+              <div class="request-name"><span class="pulse-badge"></span>${r.name || 'Staff'}</div>
+            </div>
+            <div class="request-meta">
+              ID Karyawan: <b>${r.employeeId || '-'}</b><br>
+              Meminta Akses Perangkat: <b>${r.deviceId || 'Mengecek...'}</b>
+            </div>
+            <div class="request-actions">
+              <button class="btn-approve" onclick="approveRequest('${reqId}', '${r.deviceId}', '${r.name}', '${r.employeeId}')">✅ Setujui</button>
+              <button class="btn-reject" onclick="rejectRequest('${reqId}', '${r.name}')">❌ Tolak</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // FUNGSI AKSI ADMIN: DISETUJUI
+    async function approveRequest(reqId, deviceId, name, employeeId) {
+      try {
+        // 1. Ubah status request di Firebase menjadi approved
+        await fetch(`${DATABASE_URL}/requests/${reqId}.json`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'approved' })
+        });
+
+        // 2. Ubah data device terkait agar status berubah jadi IN_USE sesuai keinginan Sketchware Anda
+        await fetch(`${DATABASE_URL}/devices/${deviceId}/status.json`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            current_status: 'IN_USE', 
+            current_user: name 
+          })
+        });
+
+        showToast(`Disetujui: ${name} (${employeeId || '-'})`);
+        fetchAll();
+      } catch (err) {
+        showToast('Gagal memproses persetujuan: ' + err.message);
+      }
+    }
+
+    // FUNGSI AKSI ADMIN: DITOLAK
+    async function rejectRequest(reqId, name) {
+      try {
+        // Cukup ubah status request di Firebase menjadi rejected
+        await fetch(`${DATABASE_URL}/requests/${reqId}.json`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'rejected' })
+        });
+
+        showToast(`Ditolak: Akses ${name} dibatalkan`);
+        fetchAll();
+      } catch (err) {
+        showToast('Gagal memproses penolakan: ' + err.message);
+      }
+    }
+
+    // Jalankan perulangan otomatis (polling setiap 3 detik) untuk memantau perubahan data real-time
     fetchAll();
-  } catch (err) {
-    showToast('Gagal: ' + err.message);
-  }
-}
-
-async function rejectRequest(reqId, name) {
-  try {
-    await fetch(`${DATABASE_URL}/requests/${reqId}.json`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'rejected' })
-    });
-    showToast(`❌ Ditolak: ${name}`);
-    fetchAll();
-  } catch (err) {
-    showToast('Gagal: ' + err.message);
-  }
-}
-
-function renderRequests(requests) {
-  const div = document.getElementById('request-list');
-  const ids = Object.keys(requests || {});
-  const pending = ids.filter(id => (requests[id] || {}).status === 'pending');
-
-  if (pending.length === 0) {
-    div.innerHTML = '<div class="empty">Tidak ada permintaan login menunggu.</div>';
-    return;
-  }
-
-  div.innerHTML = pending.map(reqId => {
-    const r = requests[reqId];
-    return `
-      <div class="request-card">
-        <div class="request-top">
-          <div class="request-name"><span class="pulse-badge"></span>${r.name || 'Staff'}</div>
-        </div>
-        <div class="request-meta">ID Karyawan: ${r.employeeId} · Minta akses: <b>${r.deviceId}</b> · ${fmtTime(r.requested_at)}</div>
-        <div class="request-actions">
-          <button class="btn-approve" onclick="approveRequest('${reqId}','${r.deviceId}','${r.employeeId}','${r.name}')">✅ Setujui</button>
-          <button class="btn-reject" onclick="rejectRequest('${reqId}','${r.name}')">❌ Tolak</button>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-async function fetchAll() {
-  try {
-    const [devRes, userRes, reqRes] = await Promise.all([
-      fetch(`${DATABASE_URL}/devices.json`),
-      fetch(`${DATABASE_URL}/users.json`),
-      fetch(`${DATABASE_URL}/requests.json`)
-    ]);
-    const devices = devRes.ok ? await devRes.json() : {};
-    const users = userRes.ok ? await userRes.json() : {};
-    const requests = reqRes.ok ? await reqRes.json() : {};
-    document.getElementById('last-update').textContent =
-      'Update terakhir: ' + new Date().toLocaleTimeString('id-ID');
-    renderRequests(requests);
-    renderDevices(devices);
-    renderUsers(users);
-  } catch (err) {
-    document.getElementById('last-update').textContent = 'Gagal memuat data: ' + err.message;
-  }
-}
-
-fetchAll();
-setInterval(fetchAll, REFRESH_MS);
-</script>
-
+    setInterval(fetchAll, 3000);
+  </script>
 </body>
 </html>
