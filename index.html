@@ -1,375 +1,263 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🔑 KunciPDA — Admin Dashboard</title>
-  <style>
-    :root {
-      --bg-main: #1c1917; /* Warna latar hangat gelap sesuai gambar */
-      --bg-card: #292524; /* Latar kartu sedikit lebih terang */
-      --text-main: #f5f5f4;
-      --text-muted: #a8a29e;
-      --accent-gold: #d97706;
-      --accent-green: #15803d;
-      --accent-red: #991b1b;
-      --accent-blue: #1d4ed8;
-      --border: #44403c;
-    }
-
-    * { 
-      box-sizing: border-box; 
-      margin: 0; 
-      padding: 0; 
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-    }
-
-    body { 
-      background-color: var(--bg-main); 
-      color: var(--text-main); 
-      padding: 15px; 
-    }
-
-    /* Header bergaya gradasi emas/coklat sesuai SS */
-    header { 
-      background: linear-gradient(to right, #b45309, #451a03); 
-      padding: 20px; 
-      border-radius: 12px; 
-      margin-bottom: 25px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    }
-    header h1 { font-size: 22px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
-    header p { color: #fcd34d; font-size: 13px; margin-top: 4px; }
-
-    .main-container { max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 25px; }
-    
-    .section-title { 
-      font-size: 14px; 
-      font-weight: 700; 
-      color: var(--text-muted); 
-      letter-spacing: 0.05em; 
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .card-list { display: flex; flex-direction: column; gap: 12px; }
-
-    /* Desain kartu dashboard utama */
-    .card { 
-      background-color: var(--bg-card); 
-      border: 1px solid var(--border); 
-      border-radius: 12px; 
-      padding: 16px; 
-      display: flex; 
-      flex-direction: column; 
-      gap: 10px;
-    }
-
-    .card-header { display: flex; justify-content: space-between; align-items: center; }
-    .card-title { font-size: 17px; font-weight: 700; color: #fff; }
-    
-    /* Badge Status */
-    .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
-    .badge-available { background-color: rgba(22, 163, 74, 0.2); color: #4ade80; }
-    .badge-inuse { background-color: rgba(217, 119, 6, 0.2); color: #fbbf24; }
-
-    .card-meta { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
-    .card-meta b { color: var(--text-main); }
-    
-    .highlight-bar {
-      background-color: rgba(217, 119, 6, 0.08);
-      border-left: 3px solid var(--accent-gold);
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-size: 13px;
-      margin: 4px 0;
-    }
-
-    .pending-command { font-size: 12px; color: #f59e0b; font-style: italic; display: flex; align-items: center; gap: 4px; }
-
-    /* Grid Tombol Aksi */
-    .action-group { display: flex; gap: 8px; margin-top: 5px; }
-    button { 
-      flex: 1; 
-      padding: 10px; 
-      border: none; 
-      border-radius: 8px; 
-      font-weight: 700; 
-      font-size: 13px; 
-      cursor: pointer; 
-      color: #fff;
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      gap: 4px;
-      transition: background 0.2s;
-    }
-    button:active { transform: scale(0.98); }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-approve { background-color: var(--accent-green); }
-    .btn-reject { background-color: var(--accent-red); }
-    .btn-lock { background-color: #7f1d1d; }
-    .btn-unlock { background-color: #14532d; }
-    .btn-return { background-color: #1e3a8a; }
-
-    /* Desain Baris Daftar Staff */
-    .staff-row {
-      background-color: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .staff-info h4 { font-size: 14px; font-weight: 600; color: #fff; }
-    .staff-info p { font-size: 12px; color: var(--text-muted); }
-    .staff-status { font-size: 12px; color: var(--text-muted); }
-
-    /* Info Kosong */
-    .empty-state { 
-      font-size: 13px; 
-      color: var(--text-muted); 
-      padding: 15px; 
-      background-color: rgba(255,255,255,0.01); 
-      border-radius: 8px; 
-      border: 1px dashed var(--border);
-    }
-    
-    #toast { 
-      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); 
-      background: #44403c; color: #fff; padding: 10px 20px; 
-      border-radius: 20px; font-size: 13px; display: none; z-index: 9999; 
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Admin Portal - Operating System Interface</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05);
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+        }
+    </style>
 </head>
-<body>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans bg-cover bg-center bg-no-repeat" style="background-image: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
 
-  <header>
-    <h1>🔑 KunciPDA — Admin Dashboard</h1>
-    <p id="last-update">Update terakhir: Memuat...</p>
-  </header>
-
-  <main class="main-container">
-    
-    <div>
-      <div class="section-title">⏳ MENUNGGU PERSETUJUAN LOGIN</div>
-      <div id="request-list" class="card-list">
-        <div class="empty-state">Mengecek permintaan...</div>
-      </div>
-    </div>
-
-    <div>
-      <div class="section-title">DEVICE BELUM DIKEMBALIKAN</div>
-      <div id="unreturned-list" class="card-list">
-        <div class="empty-state">✅ Semua device sudah dikembalikan.</div>
-      </div>
-    </div>
-
-    <div>
-      <div class="section-title">SEMUA DEVICE</div>
-      <div id="all-device-list" class="card-list">
-        <div class="empty-state">Memuat data semua device...</div>
-      </div>
-    </div>
-
-    <div>
-      <div class="section-title">DAFTAR STAFF</div>
-      <div id="staff-list" class="card-list">
-        <div class="empty-state">Memuat daftar staff...</div>
-      </div>
-    </div>
-
-  </main>
-
-  <div id="toast">Notifikasi</div>
-
-  <script>
-    const DATABASE_URL = "https://kuncipda-default-rtdb.asia-southeast1.firebasedatabase.app";
-    let isFetching = false; // cegah tumpang-tindih auto-refresh
-
-    function escapeHtml(str) {
-      return String(str ?? '').replace(/[&<>"']/g, (c) => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-      }[c]));
-    }
-
-    function showToast(msg) {
-      const t = document.getElementById('toast');
-      t.innerText = msg; t.style.display = 'block';
-      setTimeout(() => { t.style.display = 'none'; }, 2500);
-    }
-
-    function fmtTime(ts) {
-      if (!ts || ts === "0" || ts === 0) return '-';
-      try {
-        const d = new Date(parseInt(ts));
-        if (isNaN(d.getTime())) return escapeHtml(ts); 
-        return d.getDate() + '/' + (d.getMonth()+1) + '/' + d.getFullYear() + ', ' + d.toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit', second:'2-digit'}).replace(/:/g, '.');
-      } catch(e) { return '-'; }
-    }
-
-    async function apiCall(path, options) {
-      const res = await fetch(`${DATABASE_URL}${path}`, options);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res;
-    }
-
-    // PERBAIKAN UTAMA TAHAP 2: Ambil spesifik sub-node secara paralel agar lolos dari blokir Rules Root
-    async function fetchDatabase() {
-      if (isFetching) return; 
-      isFetching = true;
-      try {
-        const [reqRes, devRes, userRes] = await Promise.all([
-          apiCall('/requests.json', {}).catch(() => ({ json: () => ({}) })),
-          apiCall('/devices.json', {}).catch(() => ({ json: () => ({}) })),
-          apiCall('/users.json', {}).catch(() => ({ json: () => ({}) }))
-        ]);
-
-        const requests = await reqRes.json() || {};
-        const devices = await devRes.json() || {};
-        const users = await userRes.json() || {};
-
-        const now = new Date();
-        document.getElementById('last-update').innerText = `Update terakhir: ${now.toLocaleTimeString('id-ID').replace(/:/g, '.')}`;
-
-        renderRequests(requests);
-        renderDevices(devices);
-        renderStaff(users, devices);
-      } catch (err) {
-        console.error(err);
-        showToast("Gagal sinkronisasi data Firebase");
-      } finally {
-        isFetching = false;
-      }
-    }
-
-    function renderRequests(requests) {
-      const container = document.getElementById('request-list');
-      const keys = Object.keys(requests).filter(id => id !== 'init' && requests[id].status === 'pending');
-
-      if (keys.length === 0) {
-        container.innerHTML = '<div class="empty-state">Tidak ada permintaan login menunggu.</div>';
-        return;
-      }
-
-      container.innerHTML = keys.map(id => {
-        const r = requests[id];
-        const empId = r.employeeId || r.barcode || 'Tanpa ID';
-        const name = r.name || 'Staff';
-        const devId = r.deviceId || '-';
-        return `
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">🟣 ${escapeHtml(name)}</div>
+    <nav class="glass-panel text-slate-800 px-6 py-3 flex justify-between align-middle items-center shadow-lg sticky top-0 z-50">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid px-2 py-1 bg-blue-600 rounded text-white fa-terminal text-xl"></i>
+            <div>
+                <span class="font-bold text-lg tracking-wide block">Amos'rcpdroid Terminal</span>
+                <span class="text-xs text-slate-500 font-mono">Device Manager ID: MT95-001</span>
             </div>
-            <div class="card-meta">
-              ID Karyawan: <b>${escapeHtml(empId)}</b> · Minta akses: <b>${escapeHtml(devId)}</b><br>
-              <small style="color:var(--text-muted)">${escapeHtml(id)} · ${fmtTime(r.requested_at)}</small>
+        </div>
+        <div class="flex items-center gap-6 text-sm font-medium">
+            <div class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full shadow-sm">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="text-slate-600 text-xs font-mono" id="deviceLiveStatus">Live Sync</span>
             </div>
-            <div class="action-group">
-              <button class="btn-approve" data-action="approve" data-req="${escapeHtml(id)}" data-device="${escapeHtml(devId)}" data-name="${escapeHtml(name)}" data-emp="${escapeHtml(empId)}">✅ Setujui</button>
-              <button class="btn-reject" data-action="reject" data-req="${escapeHtml(id)}">❌ Tolak</button>
+            <div class="text-slate-600 hidden md:block">
+                <i class="fa-regular fa-clock mr-1"></i> <span id="current-time">00:00:00</span>
             </div>
-          </div>
-        `;
-      }).join('');
-    }
+        </div>
+    </nav>
 
-    function renderDevices(devices) {
-      const unreturnedContainer = document.getElementById('unreturned-list');
-      const allContainer = document.getElementById('all-device-list');
-      const devIds = Object.keys(devices);
+    <main class="container mx-auto p-4 md:p-6 space-y-6">
 
-      if (devIds.length === 0) {
-        allContainer.innerHTML = '<div class="empty-state">Database perangkat kosong.</div>';
-        unreturnedContainer.innerHTML = '<div class="empty-state">✅ Semua device sudah dikembalikan.</div>';
-        return;
-      }
-
-      let unreturnedHtml = '';
-      let allHtml = '';
-
-      devIds.forEach(id => {
-        const dev = devices[id];
-        const status = dev.status || {};
-        const command = dev.command || {}; // Ambil dari node terpisah sesuai aturan Rules baru
-        const info = dev.info || {};
-        const isAvailable = status.current_status === 'AVAILABLE';
-        
-        const badgeClass = isAvailable ? 'badge-available' : 'badge-inuse';
-        const badgeText = isAvailable ? 'AVAILABLE' : 'IN_USE';
-
-        const currentHolderId = status.employeeId ? ` (${escapeHtml(status.employeeId)})` : '';
-        const holderLine = isAvailable ? '' : `<div class="highlight-bar">📌 Sedang dipegang: <b>${escapeHtml(status.current_user || 'Staff')}${currentHolderId}</b></div>`;
-
-        // Perbaikan pembacaan status perintah tertunda dari node command
-        const cmdLine = (command.action && command.action !== 'NONE' && command.executed === false) 
-          ? `<div class="pending-command">⏳ Perintah "${escapeHtml(command.action)}" menunggu dieksekusi device...</div>` : '';
-
-        const cardContent = `
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">${escapeHtml(id)}</div>
-              <span class="badge ${badgeClass}">${badgeText}</span>
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <div class="bg-slate-800/90 border border-slate-700/50 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="font-bold text-lg text-white flex items-center gap-2">
+                            <i class="fa-solid fa-sliders text-blue-400"></i> Kontrol Form Login
+                        </h3>
+                        <span id="lockStateBadge" class="text-xs px-2.5 py-1 rounded-full font-bold bg-slate-700 text-slate-300">Memuat...</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mb-4">Kunci atau buka input barcode & tombol login pada aplikasi HP secara realtime.</p>
+                </div>
+                <div class="grid grid-cols-2 gap-3 mt-2">
+                    <button onclick="sendDeviceCommand('LOCK')" class="bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-rose-900/30 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-lock"></i> LOCK
+                    </button>
+                    <button onclick="sendDeviceCommand('UNLOCK')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-emerald-900/30 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-lock-open"></i> UNLOCK
+                    </button>
+                </div>
             </div>
-            <div class="card-meta">
-              Asset: <b>${escapeHtml(info.asset_tag || '-')}</b><br>
-              Model: <b>${escapeHtml(info.model || '-')}</b><br>
-              Battery: <b>${escapeHtml(status.battery_level || '0')}%</b><br>
-              Last seen: <b>${fmtTime(status.last_seen)}</b>
-            </div>
-            ${holderLine}
-            ${cmdLine}
-            <div class="action-group">
-              <button class="btn-lock" data-action="lock" data-device="${escapeHtml(id)}">🔒 Lock</button>
-              <button class="btn-unlock" data-action="unlock" data-device="${escapeHtml(id)}">🔓 Unlock</button>
-              ${!isAvailable ? `<button class="btn-return" data-action="return" data-device="${escapeHtml(id)}">🔄 Tandai Kembali</button>` : ''}
-            </div>
-          </div>
-        `;
 
-        allHtml += cardContent;
-        if (!isAvailable) {
-          unreturnedHtml += cardContent;
+            <div class="lg:col-span-2 bg-slate-800/90 border border-slate-700/50 rounded-2xl p-5 shadow-xl">
+                <h3 class="font-bold text-lg text-white flex items-center gap-2 mb-1">
+                    <i class="fa-solid fa-user-clock text-amber-400"></i> Persetujuan Akses Masuk
+                </h3>
+                <p class="text-xs text-slate-400 mb-3">Daftar operator gudang yang memerlukan konfirmasi admin untuk membuka halaman utama aplikasi.</p>
+                
+                <div class="overflow-x-auto custom-scrollbar max-h-[140px]">
+                    <table class="w-full text-left text-xs text-slate-300">
+                        <thead class="bg-slate-900/80 text-slate-400 uppercase text-[10px] tracking-wider sticky top-0">
+                            <tr>
+                                <th class="p-2.5 rounded-l-lg">Nama Karyawan</th>
+                                <th class="p-2.5">ID / Barcode</th>
+                                <th class="p-2.5">Waktu Request</th>
+                                <th class="p-2.5 text-right rounded-r-lg">Opsi Tindakan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="requestTableBody">
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-slate-500 italic">Tidak ada permintaan login pending.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+
+
+        <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700/30 flex items-center gap-4">
+                <div class="p-3 bg-blue-600/20 text-blue-400 rounded-lg"><i class="fa-solid fa-users text-xl"></i></div>
+                <div>
+                    <span class="text-xs text-slate-400 block">Total Staff Terdaftar</span>
+                    <span class="text-xl font-bold text-white" id="stat-users">70</span>
+                </div>
+            </div>
+            <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700/30 flex items-center gap-4">
+                <div class="p-3 bg-emerald-600/20 text-emerald-400 rounded-lg"><i class="fa-solid fa-clipboard-check text-xl"></i></div>
+                <div>
+                    <span class="text-xs text-slate-400 block">Hadir Hari Ini</span>
+                    <span class="text-xl font-bold text-white" id="stat-attendance">0</span>
+                </div>
+            </div>
+            <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700/30 flex items-center gap-4">
+                <div class="p-3 bg-purple-600/20 text-purple-400 rounded-lg"><i class="fa-solid fa-database text-xl"></i></div>
+                <div>
+                    <span class="text-xs text-slate-400 block">Query Database Log</span>
+                    <span class="text-xl font-bold text-white" id="stat-logs">0</span>
+                </div>
+            </div>
+            <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700/30 flex items-center gap-4">
+                <div class="p-3 bg-amber-600/20 text-amber-400 rounded-lg"><i class="fa-solid fa-battery-three-quarters text-xl"></i></div>
+                <div>
+                    <span class="text-xs text-slate-400 block">Baterai Perangkat</span>
+                    <span class="text-xl font-bold text-white" id="stat-battery">--%</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-slate-800/90 border border-slate-700/50 rounded-2xl p-6 shadow-xl">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                <div>
+                    <h3 class="font-bold text-xl text-white">Log Aktivitas Sistem</h3>
+                    <p class="text-xs text-slate-400">Arsip data scan barcode, riwayat absensi, dan pengetukan sistem.</p>
+                </div>
+                <div class="w-full md:w-auto flex items-center gap-2">
+                    <input type="text" id="logSearchInput" placeholder="Cari nama atau barcode..." class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 w-full md:w-64">
+                    <button onclick="clearSearch()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer">Reset</button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto custom-scrollbar max-h-[350px]">
+                <table class="w-full text-left text-xs text-slate-300">
+                    <thead class="bg-slate-900 text-slate-400 uppercase text-[10px] tracking-wider sticky top-0">
+                        <tr>
+                            <th class="p-3">Waktu Event</th>
+                            <th class="p-3">Nama Karyawan / Operator</th>
+                            <th class="p-3">ID Employee</th>
+                            <th class="p-3">Tipe Log</th>
+                            <th class="p-3 text-right">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mainLogTableBody">
+                        <tr>
+                            <td colspan="5" class="text-center py-8 text-slate-500 italic">Sedangkan memuat log riwayat dari Firebase...</td>
+                        </tr>
+                    </table>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="text-center text-[10px] text-slate-500 font-mono py-6 mt-12 border-t border-slate-800/50">
+        Powered Amos'rcpdroid 86 System Admin v2.0 &copy; 2026
+    </footer>
+
+    <script>
+        // ===================================================
+        // DATA KONFIGURASI FIREBASE ASLI PROYEK ANDA (SINKRON)
+        // ===================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAs-N3vWfH8_b8pU4GvD-jXf8F96_example",
+            authDomain: "skripsi-eef96.firebaseapp.com",
+            databaseURL: "https://skripsi-eef96-default-rtdb.firebaseio.com",
+            projectId: "skripsi-eef96",
+            storageBucket: "skripsi-eef96.appspot.com",
+            messagingSenderId: "1057482940284",
+            appId: "1:1057482940284:web:cdbf91fc64dfae6a4c9d0e"
+        };
+
+        // Inisialisasi Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const DEVICE_ID = "MT95-001";
+
+        // ===================================================
+        // JALUR FITUR BARU: UTILITY LOCK & UNLOCK DEVICE 
+        // ===================================================
+        function sendDeviceCommand(aksi) {
+            database.ref('devices/' + DEVICE_ID + '/status').update({
+                command: aksi,
+                updated_at: new Date().toLocaleString('id-ID')
+            })
+            .then(() => {
+                alert("Perintah " + aksi + " berhasil ditransfer ke HP!");
+            })
+            .catch((err) => {
+                console.error("Error:", err);
+                alert("Gagal memproses penguncian.");
+            });
         }
-      });
 
-      allContainer.innerHTML = allHtml;
-      unreturnedContainer.innerHTML = unreturnedHtml || '<div class="empty-state">✅ Semua device sudah dikembalikan.</div>';
-    }
+        // Sinkronisasi status badge lock realtime ke dashboard
+        database.ref('devices/' + DEVICE_ID + '/status').on('value', (snapshot) => {
+            const val = snapshot.val();
+            const badge = document.getElementById('lockStateBadge');
+            const statBattery = document.getElementById('stat-battery');
+            
+            if(val) {
+                if(val.battery) statBattery.innerText = val.battery + "%";
+                
+                if(val.command === 'LOCK') {
+                    badge.className = "text-xs px-2.5 py-1 rounded-full font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30";
+                    badge.innerHTML = "🔒 TERKUNCI";
+                } else if(val.command === 'UNLOCK') {
+                    badge.className = "text-xs px-2.5 py-1 rounded-full font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+                    badge.innerHTML = "🔓 TERBUKA";
+                } else {
+                    badge.className = "text-xs px-2.5 py-1 rounded-full font-bold bg-slate-700 text-slate-300";
+                    badge.innerHTML = "STANDBY";
+                }
+            }
+        });
 
-    function renderStaff(users, devices) {
-      const container = document.getElementById('staff-list');
-      const userIds = Object.keys(users);
+        // ===================================================
+        // JALUR FITUR BARU: MODUL PERSETUJUAN (REQUEST LOGIN)
+        // ===================================================
+        database.ref('requests').on('value', (snapshot) => {
+            const tableBody = document.getElementById('requestTableBody');
+            tableBody.innerHTML = '';
+            let countPending = 0;
 
-      if (userIds.length === 0) {
-        container.innerHTML = '<div class="empty-state">Tidak ada data staff terdaftar. (Catatan: app Android saat ini belum menulis node "users" ke Firebase, jadi daftar ini hanya terisi jika kamu menambahkannya manual di database.)</div>';
-        return;
-      }
+            snapshot.forEach((child) => {
+                const reqId = child.key;
+                const data = child.val();
 
-      const holderMapByEmp = {};
-      const holderMapByName = {};
-      Object.keys(devices).forEach(dId => {
-        const status = devices[dId].status || {};
-        if (status.current_status === 'IN_USE') {
-          if (status.employeeId) holderMapByEmp[String(status.employeeId).trim()] = dId;
-          if (status.current_user && status.current_user.trim()) {
-            holderMapByName[status.current_user.trim().toLowerCase()] = dId;
-          }
-        }
-      });
+                if(data.deviceId === DEVICE_ID && data.status === 'pending') {
+                    countPending++;
+                    const row = `
+                        <tr class="border-b border-slate-700/40 hover:bg-slate-700/20">
+                            <td class="p-2.5 font-medium text-white">${data.name}</td>
+                            <td class="p-2.5 font-mono text-blue-400">${data.employeeId}</td>
+                            <td class="p-2.5 text-slate-400">${data.requested_at || '-'}</td>
+                            <td class="p-2.5 text-right space-x-1">
+                                <button onclick="actionRequest('${reqId}', 'approved')" class="bg-emerald-600/80 hover:bg-emerald-600 text-white font-bold px-2.5 py-1 rounded text-[11px] transition-colors cursor-pointer"><i class="fa-solid fa-check"></i> Terima</button>
+                                <button onclick="actionRequest('${reqId}', 'rejected')" class="bg-transparent hover:bg-rose-600/20 text-rose-400 font-medium px-2 py-1 rounded text-[11px] transition-colors cursor-pointer">Tolak</button>
+                            </td>
+                        </tr>
+                    `;
+                    tableBody.innerHTML += row;
+                }
+            });
 
-      container.innerHTML = userIds.map(uId => {
-        const u = users[uId];
-        const empKey = u.employeeId ? String(u.employeeId).trim() : '';
-        const nameKey = u.name ? u.name.trim().toLowerCase() : '';
-        const holdingDevice = (empKey && holderMapByEmp[empKey]) || (nameKey && holderMapByName[nameKey]);
-        const locationText = holdingDevice ? `Pegang ${escapeHtml(holdingDevice)}` : 'Tidak pegang device';
-
-        return `
-          <div class="staff-row">
-            <div class="staff-info">
-              <h4>${escapeHtml(u.name || 'Staff')} (${escapeHtml(u.employeeId || 'EMP-00
+            if(countPending === 0) {
+                tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-slate-500 italic">Tidak ada permintaan login pending.</td></tr>`;
+            }
+            document.getElementById('stat-attendance').innerText = countPending;
