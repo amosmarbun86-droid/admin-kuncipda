@@ -3,218 +3,426 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KunciPDA - Admin Dashboard</title>
+  <title>🔑 KunciPDA — Admin Dashboard</title>
   <style>
     :root {
-      --bg-main: #0f172a;
-      --bg-card: #1e293b;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --accent-green: #10b981;
-      --accent-red: #ef4444;
-      --accent-blue: #3b82f6;
-      --border: #334155;
+      --bg-main: #1c1917; /* Warna latar hangat gelap sesuai gambar */
+      --bg-card: #292524; /* Latar kartu sedikit lebih terang */
+      --text-main: #f5f5f4;
+      --text-muted: #a8a29e;
+      --accent-gold: #d97706;
+      --accent-green: #15803d;
+      --accent-red: #991b1b;
+      --accent-blue: #1d4ed8;
+      --border: #44403c;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { background-color: var(--bg-main); color: var(--text-main); padding: 20px; }
-    header { margin-bottom: 30px; text-align: center; }
-    h1 { font-size: 24px; font-weight: 600; margin-bottom: 5px; color: var(--text-main); }
-    p.subtitle { color: var(--text-muted); font-size: 14px; }
-    .dashboard-grid { display: grid; grid-template-columns: 1fr; gap: 20px; max-width: 1200px; margin: 0 auto; }
-    @media (min-width: 768px) { .dashboard-grid { grid-template-columns: 1fr 1fr; } }
-    .section-title { font-size: 16px; font-weight: 600; margin-bottom: 15px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
-    .card-container { display: flex; flex-direction: column; gap: 15px; }
-    .device-card, .request-card { background-color: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
-    .device-top, .request-top { display: flex; justify-content: space-between; align-items: center; }
-    .device-name, .request-name { font-weight: 600; font-size: 18px; display: flex; align-items: center; gap: 8px; }
-    .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
-    .badge-available { background-color: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
-    .badge-inuse { background-color: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
-    .device-meta, .request-meta { font-size: 14px; color: var(--text-muted); line-height: 1.5; }
-    .request-actions { display: flex; gap: 10px; margin-top: 5px; }
-    button { padding: 10px 16px; border: none; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: opacity 0.2s; display: flex; align-items: center; gap: 6px; }
-    button:hover { opacity: 0.9; }
-    .btn-approve { background-color: var(--accent-green); color: white; width: 100%; justify-content: center; }
-    .btn-reject { background-color: var(--accent-red); color: white; width: 100%; justify-content: center; }
-    .empty { text-align: center; color: var(--text-muted); padding: 30px; background-color: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed var(--border); font-size: 14px; }
-    .pulse-badge { width: 8px; height: 8px; background-color: #f59e0b; border-radius: 50%; display: inline-block; animation: pulse 1.5s infinite; }
-    @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
-    #toast { position: fixed; bottom: 20px; right: 20px; background: #334155; color: #fff; padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-size: 14px; display: none; z-index: 1000; border-left: 4px solid var(--accent-blue); }
+
+    * { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+    }
+
+    body { 
+      background-color: var(--bg-main); 
+      color: var(--text-main); 
+      padding: 15px; 
+    }
+
+    /* Header bergaya gradasi emas/coklat sesuai SS */
+    header { 
+      background: linear-gradient(to right, #b45309, #451a03); 
+      padding: 20px; 
+      border-radius: 12px; 
+      margin-bottom: 25px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+    header h1 { font-size: 22px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
+    header p { color: #fcd34d; font-size: 13px; margin-top: 4px; }
+
+    .main-container { max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 25px; }
+    
+    .section-title { 
+      font-size: 14px; 
+      font-weight: 700; 
+      color: var(--text-muted); 
+      letter-spacing: 0.05em; 
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .card-list { display: flex; flex-direction: column; gap: 12px; }
+
+    /* Desain kartu dashboard utama */
+    .card { 
+      background-color: var(--bg-card); 
+      border: 1px solid var(--border); 
+      border-radius: 12px; 
+      padding: 16px; 
+      display: flex; 
+      flex-direction: column; 
+      gap: 10px;
+    }
+
+    .card-header { display: flex; justify-content: space-between; align-items: center; }
+    .card-title { font-size: 17px; font-weight: 700; color: #fff; }
+    
+    /* Badge Status */
+    .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .badge-available { background-color: rgba(22, 163, 74, 0.2); color: #4ade80; }
+    .badge-inuse { background-color: rgba(217, 119, 6, 0.2); color: #fbbf24; }
+
+    .card-meta { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+    .card-meta b { color: var(--text-main); }
+    
+    .highlight-bar {
+      background-color: rgba(217, 119, 6, 0.08);
+      border-left: 3px solid var(--accent-gold);
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      margin: 4px 0;
+    }
+
+    .pending-command { font-size: 12px; color: #f59e0b; font-style: italic; display: flex; align-items: center; gap: 4px; }
+
+    /* Grid Tombol Aksi */
+    .action-group { display: flex; gap: 8px; margin-top: 5px; }
+    button { 
+      flex: 1; 
+      padding: 10px; 
+      border: none; 
+      border-radius: 8px; 
+      font-weight: 700; 
+      font-size: 13px; 
+      cursor: pointer; 
+      color: #fff;
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      gap: 4px;
+      transition: background 0.2s;
+    }
+    button:active { transform: scale(0.98); }
+    .btn-approve { background-color: var(--accent-green); }
+    .btn-reject { background-color: var(--accent-red); }
+    .btn-lock { background-color: #7f1d1d; }
+    .btn-unlock { background-color: #14532d; }
+    .btn-return { background-color: #1e3a8a; }
+
+    /* Desain Baris Daftar Staff */
+    .staff-row {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .staff-info h4 { font-size: 14px; font-weight: 600; color: #fff; }
+    .staff-info p { font-size: 12px; color: var(--text-muted); }
+    .staff-status { font-size: 12px; color: var(--text-muted); }
+
+    /* Info Kosong */
+    .empty-state { 
+      font-size: 13px; 
+      color: var(--text-muted); 
+      padding: 15px; 
+      background-color: rgba(255,255,255,0.01); 
+      border-radius: 8px; 
+      border: 1px dashed var(--border);
+    }
+    
+    #toast { 
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); 
+      background: #44403c; color: #fff; padding: 10px 20px; 
+      border-radius: 20px; font-size: 13px; display: none; z-index: 9999; 
+    }
   </style>
 </head>
 <body>
 
   <header>
-    <h1>KunciPDA — Admin Dashboard</h1>
-    <p class="subtitle">Sistem Pemantauan & Otorisasi Perangkat Real-time</p>
+    <h1>🔑 KunciPDA — Admin Dashboard</h1>
+    <p id="last-update">Update terakhir: Memuat...</p>
   </header>
 
-  <main class="dashboard-grid">
+  <main class="main-container">
+    
     <div>
-      <div class="section-title">Status Perangkat PDA</div>
-      <div id="device-list" class="card-container">
-        <div class="empty">Memuat data perangkat...</div>
+      <div class="section-title">⏳ MENUNGGU PERSETUJUAN LOGIN</div>
+      <div id="request-list" class="card-list">
+        <div class="empty-state">Mengecek permintaan...</div>
       </div>
     </div>
 
     <div>
-      <div class="section-title">Permintaan Akses Masuk</div>
-      <div id="request-list" class="card-container">
-        <div class="empty">Memuat permintaan masuk...</div>
+      <div class="section-title">DEVICE BELUM DIKEMBALIKAN</div>
+      <div id="unreturned-list" class="card-list">
+        <div class="empty-state">✅ Semua device sudah dikembalikan.</div>
       </div>
     </div>
+
+    <div>
+      <div class="section-title">SEMUA DEVICE</div>
+      <div id="all-device-list" class="card-list">
+        <div class="empty-state">Memuat data semua device...</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">DAFTAR STAFF</div>
+      <div id="staff-list" class="card-list">
+        <div class="empty-state">Memuat daftar staff...</div>
+      </div>
+    </div>
+
   </main>
 
   <div id="toast">Notifikasi</div>
 
   <script>
-    // URL database Firebase Realtime Anda (Disamakan dari file proyek lama)
     const DATABASE_URL = "https://kuncipda-default-rtdb.asia-southeast1.firebasedatabase.app";
 
     function showToast(msg) {
       const t = document.getElementById('toast');
-      t.innerText = msg;
-      t.style.display = 'block';
-      setTimeout(() => { t.style.display = 'none'; }, 3000);
+      t.innerText = msg; t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 2500);
     }
 
     function fmtTime(ts) {
-      if (!ts || ts === "0" || ts === 0) return 'Belum tercatat';
+      if (!ts || ts === "0" || ts === 0) return '-';
       try {
         const d = new Date(parseInt(ts));
-        if(isNaN(d.getTime())) return 'Format waktu salah';
-        return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
-      } catch(e) {
-        return 'Waktu tidak valid';
-      }
+        if(isNaN(d.getTime())) return ts; // Return string bawaan jika bkn format timestamp murni
+        return d.getDate() + '/' + (d.getMonth()+1) + '/' + d.getFullYear() + ', ' + d.toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit', second:'2-digit'}).replace(/:/g, '.');
+      } catch(e) { return '-'; }
     }
 
-    // Fungsi fetch utama untuk membaca seluruh data Firebase
-    async function fetchAll() {
+    async function fetchDatabase() {
       try {
         const res = await fetch(`${DATABASE_URL}/.json`);
-        const data = await res.json() || {};
-        renderDevices(data.devices || {});
-        renderRequests(data.requests || {});
+        const db = await res.json() || {};
+        
+        // Perbarui jam update terakhir di header
+        const now = new Date();
+        document.getElementById('last-update').innerText = `Update terakhir: ${now.toLocaleTimeString('id-ID').replace(/:/g, '.')}`;
+
+        renderRequests(db.requests || {});
+        renderDevices(db.devices || {});
+        renderStaff(db.users || {}, db.devices || {});
       } catch (err) {
-        console.error("Gagal memuat data dari Firebase:", err);
-        showToast("Koneksi Firebase bermasalah");
+        console.error(err);
+        showToast("Gagal sinkronisasi data Firebase");
       }
     }
 
+    // 1. Render Permintaan Akses Masuk
+    function renderRequests(requests) {
+      const container = document.getElementById('request-list');
+      const keys = Object.keys(requests).filter(id => id !== 'init' && requests[id].status === 'pending');
+
+      if (keys.length === 0) {
+        container.innerHTML = '<div class="empty-state">Tidak ada permintaan login menunggu.</div>';
+        return;
+      }
+
+      container.innerHTML = keys.map(id => {
+        const r = requests[id];
+        // Perbaikan: gunakan employeeId, jika kosong fallback ke barcode alternatif
+        const empId = r.employeeId || r.barcode || 'Tanpa ID'; 
+        return `
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">🟣 ${r.name || 'Staff'}</div>
+            </div>
+            <div class="card-meta">
+              ID Karyawan: <b>${empId}</b> · Minta akses: <b>${r.deviceId || '-'}</b><br>
+              <small style="color:var(--text-muted)">${id} · ${fmtTime(r.requested_at)}</small>
+            </div>
+            <div class="action-group">
+              <button class="btn-approve" onclick="approveAccess('${id}', '${r.deviceId}', '${r.name}', '${empId}')">✅ Setujui</button>
+              <button class="btn-reject" onclick="rejectAccess('${id}')">❌ Tolak</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 2 & 3. Render Status Device (Belum Dikembalikan & Semua Perangkat)
     function renderDevices(devices) {
-      const div = document.getElementById('device-list');
+      const unreturnedContainer = document.getElementById('unreturned-list');
+      const allContainer = document.getElementById('all-device-list');
       const devIds = Object.keys(devices);
 
       if (devIds.length === 0) {
-        div.innerHTML = '<div class="empty">Tidak ada perangkat terdaftar di database.</div>';
+        allContainer.innerHTML = '<div class="empty-state">Database perangkat kosong.</div>';
+        unreturnedContainer.innerHTML = '<div class="empty-state">✅ Semua device sudah dikembalikan.</div>';
         return;
       }
 
-      div.innerHTML = devIds.map(id => {
+      let unreturnedHtml = '';
+      let allHtml = '';
+
+      devIds.forEach(id => {
         const dev = devices[id];
         const status = dev.status || {};
         const info = dev.info || {};
-        
         const isAvailable = status.current_status === 'AVAILABLE';
+        
         const badgeClass = isAvailable ? 'badge-available' : 'badge-inuse';
-        const labelStatus = isAvailable ? 'Tersedia' : 'Sedang Digunakan';
-        const holderText = isAvailable ? 'Siap digunakan oleh staff' : `📌 Dipegang oleh: <b>${status.current_user || 'Staff'}</b>`;
+        const badgeText = isAvailable ? 'AVAILABLE' : 'IN_USE';
 
-        return `
-          <div class="device-card">
-            <div class="device-top">
-              <div class="device-name">📱 ${id}</div>
-              <span class="badge ${badgeClass}">${labelStatus}</span>
+        // Tampilkan ID Karyawan pemegang jika ada di database status
+        const currentHolderId = status.employeeId ? ` (${status.employeeId})` : '';
+        const holderLine = isAvailable ? '' : `<div class="highlight-bar">📌 Sedang dipegang: <b>${status.current_user || 'Staff'}${currentHolderId}</b></div>`;
+        
+        // Deteksi status perintah pending
+        const cmdLine = status.command ? `<div class="pending-command">⏳ Perintah "${status.command}" menunggu dieksekusi device...</div>` : '';
+
+        const cardContent = `
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">MT95-001</div>
+              <span class="badge ${badgeClass}">${badgeText}</span>
             </div>
-            <div class="device-meta">
-              Model: ${info.model || 'Tidak Diketahui'} · Tag: ${info.asset_tag || '-'}<br>
-              Baterai: 🔋 ${status.battery_level || '0'}%<br>
-              ${holderText}<br>
-              <small style="color: var(--text-muted)">Aktif Terakhir: ${fmtTime(status.last_seen)}</small>
+            <div class="card-meta">
+              Asset: <b>${info.asset_tag || '-'}</b><br>
+              Model: <b>${info.model || '-'}</b><br>
+              Battery: <b>${status.battery_level || '0'}%</b><br>
+              Last seen: <b>${fmtTime(status.last_seen)}</b>
+            </div>
+            ${holderLine}
+            ${cmdLine}
+            <div class="action-group">
+              <button class="btn-lock" onclick="sendDeviceCommand('${id}', 'LOCK')">🔒 Lock</button>
+              <button class="btn-unlock" onclick="sendDeviceCommand('${id}', 'UNLOCK')">🔓 Unlock</button>
+              ${!isAvailable ? `<button class="btn-return" onclick="returnDeviceManual('${id}')">🔄 Tandai Kembali</button>` : ''}
             </div>
           </div>
         `;
-      }).join('');
+
+        allHtml += cardContent;
+        if (!isAvailable) {
+          unreturnedHtml += cardContent;
+        }
+      });
+
+      allContainer.innerHTML = allHtml;
+      unreturnedContainer.innerHTML = unreturnedHtml || '<div class="empty-state">✅ Semua device sudah dikembalikan.</div>';
     }
 
-    function renderRequests(requests) {
-      const div = document.getElementById('request-list');
-      const reqIds = Object.keys(requests).filter(id => id !== 'init');
-      const pending = reqIds.filter(id => (requests[id] || {}).status === 'pending');
+    // 4. Render Daftar Staff & Relasi Genggaman Device
+    function renderStaff(users, devices) {
+      const container = document.getElementById('staff-list');
+      const userIds = Object.keys(users);
 
-      if (pending.length === 0) {
-        div.innerHTML = '<div class="empty">Tidak ada permintaan login menunggu.</div>';
+      if (userIds.length === 0) {
+        container.innerHTML = '<div class="empty-state">Tidak ada data staff terdaftar.</div>';
         return;
       }
 
-      div.innerHTML = pending.map(reqId => {
-        const r = requests[reqId];
+      // Buat mapping siapa memegang device apa
+      const holderMap = {};
+      Object.keys(devices).forEach(dId => {
+        const status = devices[dId].status || {};
+        if (status.current_status === 'IN_USE' && status.current_user) {
+          holderMap[status.current_user.toLowerCase()] = dId;
+        }
+      });
+
+      container.innerHTML = userIds.map(uId => {
+        const u = users[uId];
+        const holdingDevice = holderMap[u.name ? u.name.toLowerCase() : ''];
+        const locationText = holdingDevice ? `Pegang ${holdingDevice}` : 'Tidak pegang device';
+
         return `
-          <div class="request-card">
-            <div class="request-top">
-              <div class="request-name"><span class="pulse-badge"></span>${r.name || 'Staff'}</div>
+          <div class="staff-row">
+            <div class="staff-info">
+              <h4>${u.name || 'Staff'} (${u.employeeId || 'EMP-0000'})</h4>
+              <p>${u.role || 'staff'} · ${u.status || 'active'}</p>
             </div>
-            <div class="request-meta">
-              ID Karyawan: <b>${r.employeeId || '-'}</b><br>
-              Meminta Akses Perangkat: <b>${r.deviceId || 'Mengecek...'}</b>
-            </div>
-            <div class="request-actions">
-              <button class="btn-approve" onclick="approveRequest('${reqId}', '${r.deviceId}', '${r.name}', '${r.employeeId}')">✅ Setujui</button>
-              <button class="btn-reject" onclick="rejectRequest('${reqId}', '${r.name}')">❌ Tolak</button>
-            </div>
+            <div class="staff-status">${locationText}</div>
           </div>
         `;
       }).join('');
     }
 
-    // FUNGSI AKSI ADMIN: DISETUJUI
-    async function approveRequest(reqId, deviceId, name, employeeId) {
+    // FUNGSI AKSI ADMIN
+    async function approveAccess(reqId, deviceId, name, employeeId) {
       try {
-        // 1. Ubah status request di Firebase menjadi approved
+        // Set status permintaan jadi approved
         await fetch(`${DATABASE_URL}/requests/${reqId}.json`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'approved' })
         });
 
-        // 2. Ubah data device terkait agar status berubah jadi IN_USE sesuai keinginan Sketchware Anda
+        // Set status device terikat ke user beserta ID Karyawannya
         await fetch(`${DATABASE_URL}/devices/${deviceId}/status.json`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             current_status: 'IN_USE', 
-            current_user: name 
+            current_user: name,
+            employeeId: employeeId,
+            command: 'UNLOCK' // Otomatis picu unlock perintah awal
           })
         });
 
-        showToast(`Disetujui: ${name} (${employeeId || '-'})`);
-        fetchAll();
-      } catch (err) {
-        showToast('Gagal memproses persetujuan: ' + err.message);
-      }
+        showToast(`Berhasil menyetujui ${name}`);
+        fetchDatabase();
+      } catch (err) { showToast("Gagal memproses persetujuan"); }
     }
 
-    // FUNGSI AKSI ADMIN: DITOLAK
-    async function rejectRequest(reqId, name) {
+    async function rejectAccess(reqId) {
       try {
-        // Cukup ubah status request di Firebase menjadi rejected
         await fetch(`${DATABASE_URL}/requests/${reqId}.json`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'rejected' })
         });
-
-        showToast(`Ditolak: Akses ${name} dibatalkan`);
-        fetchAll();
-      } catch (err) {
-        showToast('Gagal memproses penolakan: ' + err.message);
-      }
+        showToast("Permintaan ditolak");
+        fetchDatabase();
+      } catch (err) { showToast("Gagal menolak permintaan"); }
     }
 
-    // Jalankan perulangan otomatis (polling setiap 3 detik) untuk memantau perubahan data real-time
-    fetchAll();
-    setInterval(fetchAll, 3000);
+    async function sendDeviceCommand(deviceId, commandStr) {
+      try {
+        await fetch(`${DATABASE_URL}/devices/${deviceId}/status.json`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: commandStr })
+        });
+        showToast(`Kirim perintah ${commandStr} ke perangkat`);
+        fetchDatabase();
+      } catch (err) { showToast("Gagal mengirim perintah"); }
+    }
+
+    async function returnDeviceManual(deviceId) {
+      try {
+        await fetch(`${DATABASE_URL}/devices/${deviceId}/status.json`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            current_status: 'AVAILABLE', 
+            current_user: '',
+            employeeId: '',
+            command: ''
+          })
+        });
+        showToast("Perangkat berhasil ditandai kembali");
+        fetchDatabase();
+      } catch (err) { showToast("Gagal memproses pengembalian"); }
+    }
+
+    // Interval Real-time update otomatis setiap 3 detik
+    fetchDatabase();
+    setInterval(fetchDatabase, 3000);
   </script>
 </body>
 </html>
