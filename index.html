@@ -107,6 +107,7 @@
       transition: background 0.2s;
     }
     button:active { transform: scale(0.98); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-approve { background-color: var(--accent-green); }
     .btn-reject { background-color: var(--accent-red); }
     .btn-lock { background-color: #7f1d1d; }
@@ -187,6 +188,13 @@
 
   <script>
     const DATABASE_URL = "https://kuncipda-default-rtdb.asia-southeast1.firebasedatabase.app";
+    let isFetching = false; // cegah tumpang-tindih auto-refresh
+
+    function escapeHtml(str) {
+      return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[c]));
+    }
 
     function showToast(msg) {
       const t = document.getElementById('toast');
@@ -198,16 +206,25 @@
       if (!ts || ts === "0" || ts === 0) return '-';
       try {
         const d = new Date(parseInt(ts));
-        if(isNaN(d.getTime())) return ts; // Return string bawaan jika bkn format timestamp murni
+        if (isNaN(d.getTime())) return escapeHtml(ts); // Return string bawaan jika bkn format timestamp murni
         return d.getDate() + '/' + (d.getMonth()+1) + '/' + d.getFullYear() + ', ' + d.toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit', second:'2-digit'}).replace(/:/g, '.');
       } catch(e) { return '-'; }
     }
 
+    // Wrapper fetch yang melempar error kalau response tidak OK
+    async function apiCall(path, options) {
+      const res = await fetch(`${DATABASE_URL}${path}`, options);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res;
+    }
+
     async function fetchDatabase() {
+      if (isFetching) return; // hindari race condition antar interval
+      isFetching = true;
       try {
-        const res = await fetch(`${DATABASE_URL}/.json`);
+        const res = await apiCall('/.json', {});
         const db = await res.json() || {};
-        
+
         // Perbarui jam update terakhir di header
         const now = new Date();
         document.getElementById('last-update').innerText = `Update terakhir: ${now.toLocaleTimeString('id-ID').replace(/:/g, '.')}`;
@@ -218,6 +235,8 @@
       } catch (err) {
         console.error(err);
         showToast("Gagal sinkronisasi data Firebase");
+      } finally {
+        isFetching = false;
       }
     }
 
@@ -234,19 +253,21 @@
       container.innerHTML = keys.map(id => {
         const r = requests[id];
         // Perbaikan: gunakan employeeId, jika kosong fallback ke barcode alternatif
-        const empId = r.employeeId || r.barcode || 'Tanpa ID'; 
+        const empId = r.employeeId || r.barcode || 'Tanpa ID';
+        const name = r.name || 'Staff';
+        const devId = r.deviceId || '-';
         return `
           <div class="card">
             <div class="card-header">
-              <div class="card-title">🟣 ${r.name || 'Staff'}</div>
+              <div class="card-title">🟣 ${escapeHtml(name)}</div>
             </div>
             <div class="card-meta">
-              ID Karyawan: <b>${empId}</b> · Minta akses: <b>${r.deviceId || '-'}</b><br>
-              <small style="color:var(--text-muted)">${id} · ${fmtTime(r.requested_at)}</small>
+              ID Karyawan: <b>${escapeHtml(empId)}</b> · Minta akses: <b>${escapeHtml(devId)}</b><br>
+              <small style="color:var(--text-muted)">${escapeHtml(id)} · ${fmtTime(r.requested_at)}</small>
             </div>
             <div class="action-group">
-              <button class="btn-approve" onclick="approveAccess('${id}', '${r.deviceId}', '${r.name}', '${empId}')">✅ Setujui</button>
-              <button class="btn-reject" onclick="rejectAccess('${id}')">❌ Tolak</button>
+              <button class="btn-approve" data-action="approve" data-req="${escapeHtml(id)}" data-device="${escapeHtml(devId)}" data-name="${escapeHtml(name)}" data-emp="${escapeHtml(empId)}">✅ Setujui</button>
+              <button class="btn-reject" data-action="reject" data-req="${escapeHtml(id)}">❌ Tolak</button>
             </div>
           </div>
         `;
@@ -278,30 +299,30 @@
         const badgeText = isAvailable ? 'AVAILABLE' : 'IN_USE';
 
         // Tampilkan ID Karyawan pemegang jika ada di database status
-        const currentHolderId = status.employeeId ? ` (${status.employeeId})` : '';
-        const holderLine = isAvailable ? '' : `<div class="highlight-bar">📌 Sedang dipegang: <b>${status.current_user || 'Staff'}${currentHolderId}</b></div>`;
-        
+        const currentHolderId = status.employeeId ? ` (${escapeHtml(status.employeeId)})` : '';
+        const holderLine = isAvailable ? '' : `<div class="highlight-bar">📌 Sedang dipegang: <b>${escapeHtml(status.current_user || 'Staff')}${currentHolderId}</b></div>`;
+
         // Deteksi status perintah pending
-        const cmdLine = status.command ? `<div class="pending-command">⏳ Perintah "${status.command}" menunggu dieksekusi device...</div>` : '';
+        const cmdLine = status.command ? `<div class="pending-command">⏳ Perintah "${escapeHtml(status.command)}" menunggu dieksekusi device...</div>` : '';
 
         const cardContent = `
           <div class="card">
             <div class="card-header">
-              <div class="card-title">MT95-001</div>
+              <div class="card-title">${escapeHtml(id)}</div>
               <span class="badge ${badgeClass}">${badgeText}</span>
             </div>
             <div class="card-meta">
-              Asset: <b>${info.asset_tag || '-'}</b><br>
-              Model: <b>${info.model || '-'}</b><br>
-              Battery: <b>${status.battery_level || '0'}%</b><br>
+              Asset: <b>${escapeHtml(info.asset_tag || '-')}</b><br>
+              Model: <b>${escapeHtml(info.model || '-')}</b><br>
+              Battery: <b>${escapeHtml(status.battery_level || '0')}%</b><br>
               Last seen: <b>${fmtTime(status.last_seen)}</b>
             </div>
             ${holderLine}
             ${cmdLine}
             <div class="action-group">
-              <button class="btn-lock" onclick="sendDeviceCommand('${id}', 'LOCK')">🔒 Lock</button>
-              <button class="btn-unlock" onclick="sendDeviceCommand('${id}', 'UNLOCK')">🔓 Unlock</button>
-              ${!isAvailable ? `<button class="btn-return" onclick="returnDeviceManual('${id}')">🔄 Tandai Kembali</button>` : ''}
+              <button class="btn-lock" data-action="lock" data-device="${escapeHtml(id)}">🔒 Lock</button>
+              <button class="btn-unlock" data-action="unlock" data-device="${escapeHtml(id)}">🔓 Unlock</button>
+              ${!isAvailable ? `<button class="btn-return" data-action="return" data-device="${escapeHtml(id)}">🔄 Tandai Kembali</button>` : ''}
             </div>
           </div>
         `;
@@ -322,29 +343,37 @@
       const userIds = Object.keys(users);
 
       if (userIds.length === 0) {
-        container.innerHTML = '<div class="empty-state">Tidak ada data staff terdaftar.</div>';
+        container.innerHTML = '<div class="empty-state">Tidak ada data staff terdaftar. (Catatan: app Android saat ini belum menulis node "users" ke Firebase, jadi daftar ini hanya terisi jika kamu menambahkannya manual di database.)</div>';
         return;
       }
 
-      // Buat mapping siapa memegang device apa
-      const holderMap = {};
+      // Buat mapping siapa memegang device apa.
+      // Diprioritaskan cocok berdasarkan employeeId (unik), baru fallback ke nama,
+      // supaya tidak salah pasang antar staff dengan nama yang sama / kosong.
+      const holderMapByEmp = {};
+      const holderMapByName = {};
       Object.keys(devices).forEach(dId => {
         const status = devices[dId].status || {};
-        if (status.current_status === 'IN_USE' && status.current_user) {
-          holderMap[status.current_user.toLowerCase()] = dId;
+        if (status.current_status === 'IN_USE') {
+          if (status.employeeId) holderMapByEmp[String(status.employeeId).trim()] = dId;
+          if (status.current_user && status.current_user.trim()) {
+            holderMapByName[status.current_user.trim().toLowerCase()] = dId;
+          }
         }
       });
 
       container.innerHTML = userIds.map(uId => {
         const u = users[uId];
-        const holdingDevice = holderMap[u.name ? u.name.toLowerCase() : ''];
-        const locationText = holdingDevice ? `Pegang ${holdingDevice}` : 'Tidak pegang device';
+        const empKey = u.employeeId ? String(u.employeeId).trim() : '';
+        const nameKey = u.name ? u.name.trim().toLowerCase() : '';
+        const holdingDevice = (empKey && holderMapByEmp[empKey]) || (nameKey && holderMapByName[nameKey]);
+        const locationText = holdingDevice ? `Pegang ${escapeHtml(holdingDevice)}` : 'Tidak pegang device';
 
         return `
           <div class="staff-row">
             <div class="staff-info">
-              <h4>${u.name || 'Staff'} (${u.employeeId || 'EMP-0000'})</h4>
-              <p>${u.role || 'staff'} · ${u.status || 'active'}</p>
+              <h4>${escapeHtml(u.name || 'Staff')} (${escapeHtml(u.employeeId || 'EMP-0000')})</h4>
+              <p>${escapeHtml(u.role || 'staff')} · ${escapeHtml(u.status || 'active')}</p>
             </div>
             <div class="staff-status">${locationText}</div>
           </div>
@@ -356,18 +385,18 @@
     async function approveAccess(reqId, deviceId, name, employeeId) {
       try {
         // Set status permintaan jadi approved
-        await fetch(`${DATABASE_URL}/requests/${reqId}.json`, {
+        await apiCall(`/requests/${reqId}.json`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'approved' })
         });
 
         // Set status device terikat ke user beserta ID Karyawannya
-        await fetch(`${DATABASE_URL}/devices/${deviceId}/status.json`, {
+        await apiCall(`/devices/${deviceId}/status.json`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            current_status: 'IN_USE', 
+          body: JSON.stringify({
+            current_status: 'IN_USE',
             current_user: name,
             employeeId: employeeId,
             command: 'UNLOCK' // Otomatis picu unlock perintah awal
@@ -376,40 +405,40 @@
 
         showToast(`Berhasil menyetujui ${name}`);
         fetchDatabase();
-      } catch (err) { showToast("Gagal memproses persetujuan"); }
+      } catch (err) { console.error(err); showToast("Gagal memproses persetujuan"); }
     }
 
     async function rejectAccess(reqId) {
       try {
-        await fetch(`${DATABASE_URL}/requests/${reqId}.json`, {
+        await apiCall(`/requests/${reqId}.json`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'rejected' })
         });
         showToast("Permintaan ditolak");
         fetchDatabase();
-      } catch (err) { showToast("Gagal menolak permintaan"); }
+      } catch (err) { console.error(err); showToast("Gagal menolak permintaan"); }
     }
 
     async function sendDeviceCommand(deviceId, commandStr) {
       try {
-        await fetch(`${DATABASE_URL}/devices/${deviceId}/status.json`, {
+        await apiCall(`/devices/${deviceId}/status.json`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ command: commandStr })
         });
         showToast(`Kirim perintah ${commandStr} ke perangkat`);
         fetchDatabase();
-      } catch (err) { showToast("Gagal mengirim perintah"); }
+      } catch (err) { console.error(err); showToast("Gagal mengirim perintah"); }
     }
 
     async function returnDeviceManual(deviceId) {
       try {
-        await fetch(`${DATABASE_URL}/devices/${deviceId}/status.json`, {
+        await apiCall(`/devices/${deviceId}/status.json`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            current_status: 'AVAILABLE', 
+          body: JSON.stringify({
+            current_status: 'AVAILABLE',
             current_user: '',
             employeeId: '',
             command: ''
@@ -417,8 +446,26 @@
         });
         showToast("Perangkat berhasil ditandai kembali");
         fetchDatabase();
-      } catch (err) { showToast("Gagal memproses pengembalian"); }
+      } catch (err) { console.error(err); showToast("Gagal memproses pengembalian"); }
     }
+
+    // Event delegation: satu listener untuk semua tombol aksi (aman dari nama/ID berisi kutip)
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      if (action === 'approve') {
+        approveAccess(btn.dataset.req, btn.dataset.device, btn.dataset.name, btn.dataset.emp);
+      } else if (action === 'reject') {
+        rejectAccess(btn.dataset.req);
+      } else if (action === 'lock') {
+        sendDeviceCommand(btn.dataset.device, 'LOCK');
+      } else if (action === 'unlock') {
+        sendDeviceCommand(btn.dataset.device, 'UNLOCK');
+      } else if (action === 'return') {
+        returnDeviceManual(btn.dataset.device);
+      }
+    });
 
     // Interval Real-time update otomatis setiap 3 detik
     fetchDatabase();
