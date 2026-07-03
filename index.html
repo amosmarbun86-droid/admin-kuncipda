@@ -170,13 +170,57 @@ function renderUsers(users) {
 }
 
 async function approveRequest(reqId, empId, name, devId) {
-  await fetch(`${DATABASE_URL}/requests/${reqId}.json`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status: 'approved' })
-  });
-  showToast(`✅ Disetujui: ${name}`);
-  fetchAll();
+
+  try {
+
+    // Approve request
+    await fetch(`${DATABASE_URL}/requests/${reqId}.json`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type":"application/json"
+      },
+      body: JSON.stringify({
+        status:"approved"
+      })
+    });
+
+    // Update user
+    await fetch(`${DATABASE_URL}/users/${empId}.json`, {
+      method:"PATCH",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body: JSON.stringify({
+        active_device: devId,
+        status: "ACTIVE",
+        name: name
+      })
+    });
+
+    // Update device
+    await fetch(`${DATABASE_URL}/devices/${devId}/status.json`, {
+      method:"PATCH",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body: JSON.stringify({
+        current_status:"IN_USE",
+        current_user:name,
+        employeeId:empId,
+        last_seen:Date.now()
+      })
+    });
+
+    showToast("✅ Login disetujui");
+
+    fetchAll();
+
+  } catch(e){
+
+    showToast(e.message);
+
+  }
+
 }
 
 async function rejectRequest(reqId, name) {
