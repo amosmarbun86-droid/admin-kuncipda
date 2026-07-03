@@ -206,32 +206,38 @@
       if (!ts || ts === "0" || ts === 0) return '-';
       try {
         const d = new Date(parseInt(ts));
-        if (isNaN(d.getTime())) return escapeHtml(ts); // Return string bawaan jika bkn format timestamp murni
+        if (isNaN(d.getTime())) return escapeHtml(ts); 
         return d.getDate() + '/' + (d.getMonth()+1) + '/' + d.getFullYear() + ', ' + d.toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit', second:'2-digit'}).replace(/:/g, '.');
       } catch(e) { return '-'; }
     }
 
-    // Wrapper fetch yang melempar error kalau response tidak OK
     async function apiCall(path, options) {
       const res = await fetch(`${DATABASE_URL}${path}`, options);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res;
     }
 
+    // PERBAIKAN UTAMA TAHAP 2: Ambil spesifik sub-node secara paralel agar lolos dari blokir Rules Root
     async function fetchDatabase() {
-      if (isFetching) return; // hindari race condition antar interval
+      if (isFetching) return; 
       isFetching = true;
       try {
-        const res = await apiCall('/.json', {});
-        const db = await res.json() || {};
+        const [reqRes, devRes, userRes] = await Promise.all([
+          apiCall('/requests.json', {}).catch(() => ({ json: () => ({}) })),
+          apiCall('/devices.json', {}).catch(() => ({ json: () => ({}) })),
+          apiCall('/users.json', {}).catch(() => ({ json: () => ({}) }))
+        ]);
 
-        // Perbarui jam update terakhir di header
+        const requests = await reqRes.json() || {};
+        const devices = await devRes.json() || {};
+        const users = await userRes.json() || {};
+
         const now = new Date();
         document.getElementById('last-update').innerText = `Update terakhir: ${now.toLocaleTimeString('id-ID').replace(/:/g, '.')}`;
 
-        renderRequests(db.requests || {});
-        renderDevices(db.devices || {});
-        renderStaff(db.users || {}, db.devices || {});
+        renderRequests(requests);
+        renderDevices(devices);
+        renderStaff(users, devices);
       } catch (err) {
         console.error(err);
         showToast("Gagal sinkronisasi data Firebase");
@@ -240,7 +246,6 @@
       }
     }
 
-    // 1. Render Permintaan Akses Masuk
     function renderRequests(requests) {
       const container = document.getElementById('request-list');
       const keys = Object.keys(requests).filter(id => id !== 'init' && requests[id].status === 'pending');
@@ -252,7 +257,6 @@
 
       container.innerHTML = keys.map(id => {
         const r = requests[id];
-        // Perbaikan: gunakan employeeId, jika kosong fallback ke barcode alternatif
         const empId = r.employeeId || r.barcode || 'Tanpa ID';
         const name = r.name || 'Staff';
         const devId = r.deviceId || '-';
@@ -274,7 +278,6 @@
       }).join('');
     }
 
-    // 2 & 3. Render Status Device (Belum Dikembalikan & Semua Perangkat)
     function renderDevices(devices) {
       const unreturnedContainer = document.getElementById('unreturned-list');
       const allContainer = document.getElementById('all-device-list');
@@ -292,18 +295,19 @@
       devIds.forEach(id => {
         const dev = devices[id];
         const status = dev.status || {};
+        const command = dev.command || {}; // Ambil dari node terpisah sesuai aturan Rules baru
         const info = dev.info || {};
         const isAvailable = status.current_status === 'AVAILABLE';
         
         const badgeClass = isAvailable ? 'badge-available' : 'badge-inuse';
         const badgeText = isAvailable ? 'AVAILABLE' : 'IN_USE';
 
-        // Tampilkan ID Karyawan pemegang jika ada di database status
         const currentHolderId = status.employeeId ? ` (${escapeHtml(status.employeeId)})` : '';
         const holderLine = isAvailable ? '' : `<div class="highlight-bar">📌 Sedang dipegang: <b>${escapeHtml(status.current_user || 'Staff')}${currentHolderId}</b></div>`;
 
-        // Deteksi status perintah pending
-        const cmdLine = status.command ? `<div class="pending-command">⏳ Perintah "${escapeHtml(status.command)}" menunggu dieksekusi device...</div>` : '';
+        // Perbaikan pembacaan status perintah tertunda dari node command
+        const cmdLine = (command.action && command.action !== 'NONE' && command.executed === false) 
+          ? `<div class="pending-command">⏳ Perintah "${escapeHtml(command.action)}" menunggu dieksekusi device...</div>` : '';
 
         const cardContent = `
           <div class="card">
@@ -337,7 +341,6 @@
       unreturnedContainer.innerHTML = unreturnedHtml || '<div class="empty-state">✅ Semua device sudah dikembalikan.</div>';
     }
 
-    // 4. Render Daftar Staff & Relasi Genggaman Device
     function renderStaff(users, devices) {
       const container = document.getElementById('staff-list');
       const userIds = Object.keys(users);
@@ -347,9 +350,6 @@
         return;
       }
 
-      // Buat mapping siapa memegang device apa.
-      // Diprioritaskan cocok berdasarkan employeeId (unik), baru fallback ke nama,
-      // supaya tidak salah pasang antar staff dengan nama yang sama / kosong.
       const holderMapByEmp = {};
       const holderMapByName = {};
       Object.keys(devices).forEach(dId => {
@@ -372,104 +372,4 @@
         return `
           <div class="staff-row">
             <div class="staff-info">
-              <h4>${escapeHtml(u.name || 'Staff')} (${escapeHtml(u.employeeId || 'EMP-0000')})</h4>
-              <p>${escapeHtml(u.role || 'staff')} · ${escapeHtml(u.status || 'active')}</p>
-            </div>
-            <div class="staff-status">${locationText}</div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    // FUNGSI AKSI ADMIN
-    async function approveAccess(reqId, deviceId, name, employeeId) {
-      try {
-        // Set status permintaan jadi approved
-        await apiCall(`/requests/${reqId}.json`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'approved' })
-        });
-
-        // Set status device terikat ke user beserta ID Karyawannya
-        await apiCall(`/devices/${deviceId}/status.json`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            current_status: 'IN_USE',
-            current_user: name,
-            employeeId: employeeId,
-            command: 'UNLOCK' // Otomatis picu unlock perintah awal
-          })
-        });
-
-        showToast(`Berhasil menyetujui ${name}`);
-        fetchDatabase();
-      } catch (err) { console.error(err); showToast("Gagal memproses persetujuan"); }
-    }
-
-    async function rejectAccess(reqId) {
-      try {
-        await apiCall(`/requests/${reqId}.json`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'rejected' })
-        });
-        showToast("Permintaan ditolak");
-        fetchDatabase();
-      } catch (err) { console.error(err); showToast("Gagal menolak permintaan"); }
-    }
-
-    async function sendDeviceCommand(deviceId, commandStr) {
-      try {
-        await apiCall(`/devices/${deviceId}/status.json`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ command: commandStr })
-        });
-        showToast(`Kirim perintah ${commandStr} ke perangkat`);
-        fetchDatabase();
-      } catch (err) { console.error(err); showToast("Gagal mengirim perintah"); }
-    }
-
-    async function returnDeviceManual(deviceId) {
-      try {
-        await apiCall(`/devices/${deviceId}/status.json`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            current_status: 'AVAILABLE',
-            current_user: '',
-            employeeId: '',
-            command: ''
-          })
-        });
-        showToast("Perangkat berhasil ditandai kembali");
-        fetchDatabase();
-      } catch (err) { console.error(err); showToast("Gagal memproses pengembalian"); }
-    }
-
-    // Event delegation: satu listener untuk semua tombol aksi (aman dari nama/ID berisi kutip)
-    document.addEventListener('click', (e) => {
-      const btn = e.target.closest('button[data-action]');
-      if (!btn) return;
-      const action = btn.dataset.action;
-      if (action === 'approve') {
-        approveAccess(btn.dataset.req, btn.dataset.device, btn.dataset.name, btn.dataset.emp);
-      } else if (action === 'reject') {
-        rejectAccess(btn.dataset.req);
-      } else if (action === 'lock') {
-        sendDeviceCommand(btn.dataset.device, 'LOCK');
-      } else if (action === 'unlock') {
-        sendDeviceCommand(btn.dataset.device, 'UNLOCK');
-      } else if (action === 'return') {
-        returnDeviceManual(btn.dataset.device);
-      }
-    });
-
-    // Interval Real-time update otomatis setiap 3 detik
-    fetchDatabase();
-    setInterval(fetchDatabase, 3000);
-  </script>
-</body>
-</html>
+              <h4>${escapeHtml(u.name || 'Staff')} (${escapeHtml(u.employeeId || 'EMP-00
