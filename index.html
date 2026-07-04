@@ -307,6 +307,15 @@ async function approveRequest(reqId, empId, name, devId) {
 
   try {
 
+    // Set status "approved" dulu - INI WAJIB ADA supaya app Android (MainActivity)
+    // yang sedang menunggu event ini bisa pindah ke halaman Home. Kalau langkah ini
+    // dilewati, app di HP staff akan macet di spinner "Mengirim permintaan..." selamanya.
+    await fetch(`${DATABASE_URL}/requests/${reqId}.json`, {
+      method: "PATCH",
+      headers: { "Content-Type":"application/json" },
+      body: JSON.stringify({ status: "approved" })
+    });
+
     // Update user
     await fetch(`${DATABASE_URL}/users/${empId}.json`, {
       method:"PATCH",
