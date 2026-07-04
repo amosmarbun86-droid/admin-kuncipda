@@ -274,16 +274,30 @@ function renderHistory(logs) {
   }).join('');
 }
 
+async function deleteUser(id) {
+  try {
+    await fetch(`${DATABASE_URL}/users/${id}.json`, { method: 'DELETE' });
+    showToast(`Staff ${id} dihapus`);
+    fetchAll();
+  } catch (err) { showToast('Gagal hapus: ' + err.message); }
+}
+
 function renderUsers(users) {
   const div = document.getElementById('user-list');
   const ids = Object.keys(users || {});
   div.innerHTML = ids.length ? ids.map(id => {
     const u = users[id] || {};
+    const isIdle = (u.status || '').toUpperCase() !== 'ACTIVE';
     return `
     <div class="request-card" style="padding:10px;">
-      <div style="font-weight:600;">${u.name || id} <span style="font-weight:400; color:#94a3b8;">(${id})</span></div>
-      <div style="font-size:0.8rem; color:#94a3b8;">${u.role || '-'} · ${u.status || 'IDLE'}</div>
-      <div style="font-size:0.8rem; color:#94a3b8;">Device: ${u.active_device ? u.active_device : '-'}</div>
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+        <div>
+          <div style="font-weight:600;">${u.name || id} <span style="font-weight:400; color:#94a3b8;">(${id})</span></div>
+          <div style="font-size:0.8rem; color:#94a3b8;">${u.role || '-'} · ${u.status || 'IDLE'}</div>
+          <div style="font-size:0.8rem; color:#94a3b8;">Device: ${u.active_device ? u.active_device : '-'}</div>
+        </div>
+        ${isIdle ? `<button style="flex:none; padding:6px 10px; background:#7f1d1d; color:white; border:none; border-radius:6px; font-size:0.75rem; cursor:pointer;" onclick="deleteUser('${id}')">Hapus</button>` : ''}
+      </div>
     </div>
   `;
   }).join('') : '<div class="empty">Belum ada staff.</div>';
