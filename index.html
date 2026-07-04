@@ -220,7 +220,7 @@ function renderUsers(users) {
     const u = users[id] || {};
     return `
     <div class="request-card" style="padding:10px;">
-      <div style="font-weight:600;">${u.name || id}</div>
+      <div style="font-weight:600;">${u.name || id} <span style="font-weight:400; color:#94a3b8;">(${id})</span></div>
       <div style="font-size:0.8rem; color:#94a3b8;">${u.role || '-'} · ${u.status || 'IDLE'}</div>
       <div style="font-size:0.8rem; color:#94a3b8;">Device: ${u.active_device ? u.active_device : '-'}</div>
     </div>
