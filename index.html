@@ -98,10 +98,10 @@ function fmtTime(ts) {
 
 async function sendCommand(deviceId, action) {
   try {
-    await fetch(`${DATABASE_URL}/devices/${deviceId}/command.json`, {
-      method: 'PUT',
+    await fetch(`${DATABASE_URL}/devices/${deviceId}/status.json`, {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: action, executed: false })
+      body: JSON.stringify({ command: action })
     });
     showToast(`Perintah "${action}" terkirim ke ${deviceId}`);
     fetchAll();
@@ -185,9 +185,8 @@ function renderDevices(devices) {
   ids.forEach(id => {
     const d = devices[id] || {};
     const status = d.status || {};
-    const command = d.command || {};
     const isInUse = (status.current_status || '').toUpperCase() === 'IN_USE';
-    const pendingCmd = command.action && command.action !== 'NONE' && command.executed === false;
+    const pendingCmd = status.command && status.command !== 'NONE';
 
     const cardHtml = (flaggedStyle) => `
       <div class="device-card">
@@ -198,7 +197,7 @@ function renderDevices(devices) {
         <div class="row"><span>Asset</span><b>${(d.info || {}).asset_tag || '-'}</b></div>
         <div class="row"><span>Battery</span><b>${status.battery_level != null ? status.battery_level + '%' : '-'}</b></div>
         ${isInUse ? `<div class="holder-banner">📌 Dipakai: <b>${status.current_user || 'Unknown'}</b></div>` : ''}
-        ${pendingCmd ? `<div style="font-size:0.7rem; color:#f59e0b; margin-top:5px;">⏳ Waiting: ${command.action}</div>` : ''}
+        ${pendingCmd ? `<div style="font-size:0.7rem; color:#f59e0b; margin-top:5px;">⏳ Waiting: ${status.command}</div>` : ''}
         <div class="actions">
           <button style="background:#991b1b; color:white;" onclick="sendCommand('${id}','LOCK')">Lock</button>
           <button style="background:#065f46; color:white;" onclick="sendCommand('${id}','UNLOCK')">Unlock</button>
@@ -217,28 +216,21 @@ function renderDevices(devices) {
 function renderUsers(users) {
   const div = document.getElementById('user-list');
   const ids = Object.keys(users || {});
-  div.innerHTML = ids.length ? ids.map(id => `
+  div.innerHTML = ids.length ? ids.map(id => {
+    const u = users[id] || {};
+    return `
     <div class="request-card" style="padding:10px;">
-      <div style="font-weight:600;">${users[id].name || id}</div>
-      <div style="font-size:0.8rem; color:#94a3b8;">${users[id].role || '-'}</div>
+      <div style="font-weight:600;">${u.name || id}</div>
+      <div style="font-size:0.8rem; color:#94a3b8;">${u.role || '-'} · ${u.status || 'IDLE'}</div>
+      <div style="font-size:0.8rem; color:#94a3b8;">Device: ${u.active_device ? u.active_device : '-'}</div>
     </div>
-  `).join('') : '<div class="empty">Belum ada staff.</div>';
+  `;
+  }).join('') : '<div class="empty">Belum ada staff.</div>';
 }
 
 async function approveRequest(reqId, empId, name, devId) {
 
   try {
-
-    // Approve request
-    await fetch(`${DATABASE_URL}/requests/${reqId}.json`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type":"application/json"
-      },
-      body: JSON.stringify({
-        status:"approved"
-      })
-    });
 
     // Update user
     await fetch(`${DATABASE_URL}/users/${empId}.json`, {
@@ -267,6 +259,11 @@ async function approveRequest(reqId, empId, name, devId) {
       })
     });
 
+    // Hapus request dari Firebase setelah disetujui
+    await fetch(`${DATABASE_URL}/requests/${reqId}.json`, {
+      method: "DELETE"
+    });
+
     showToast("✅ Login disetujui");
 
     fetchAll();
@@ -280,13 +277,14 @@ async function approveRequest(reqId, empId, name, devId) {
 }
 
 async function rejectRequest(reqId, name) {
-  await fetch(`${DATABASE_URL}/requests/${reqId}.json`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status: 'rejected' })
-  });
-  showToast(`❌ Ditolak: ${name}`);
-  fetchAll();
+  try {
+    // Hapus request dari Firebase setelah ditolak
+    await fetch(`${DATABASE_URL}/requests/${reqId}.json`, {
+      method: 'DELETE'
+    });
+    showToast(`❌ Ditolak: ${name}`);
+    fetchAll();
+  } catch (err) { showToast('Gagal: ' + err.message); }
 }
 
 function renderRequests(requests) {
