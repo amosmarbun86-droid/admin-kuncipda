@@ -43,6 +43,13 @@
         .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; border: 1px solid #475569; padding: 12px 24px; border-radius: 999px; opacity: 0; transition: opacity 0.3s; }
         .toast.show { opacity: 1; }
         .empty { color: #475569; font-style: italic; padding: 10px; }
+
+        /* Riwayat Penggunaan */
+        .history-card { background: var(--card); border: 1px solid #334155; border-radius: 12px; padding: 16px; margin-bottom: 12px; cursor: pointer; user-select: none; }
+        .history-head { display: flex; justify-content: space-between; align-items: center; }
+        .history-body { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+        .history-entry { display: flex; justify-content: space-between; font-size: 0.8rem; color: #cbd5e1; border-top: 1px solid #334155; padding-top: 6px; }
+        .history-entry:first-child { border-top: none; padding-top: 0; }
     </style>
 </head>
 <body>
@@ -64,6 +71,9 @@
 
     <div class="section-title">Daftar Staff</div>
     <div id="user-list"></div>
+
+    <div class="section-title">📜 Riwayat Penggunaan</div>
+    <div id="history-list"></div>
 </main>
 
 <div class="toast" id="toast"></div>
@@ -158,6 +168,17 @@ async function forceCheckin(deviceId){
 
         });
 
+        // Catat riwayat: device ini dikembalikan oleh staff yang bersangkutan
+        await fetch(`${DATABASE_URL}/logs/${deviceId}.json`, {
+          method: "POST",
+          headers: { "Content-Type":"application/json" },
+          body: JSON.stringify({
+            event: "CHECKIN",
+            user: `${users[empId].name || 'Staff'} (${empId})`,
+            timestamp: Date.now()
+          })
+        });
+
         break;
 
       }
@@ -196,7 +217,7 @@ function renderDevices(devices) {
         </div>
         <div class="row"><span>Asset</span><b>${(d.info || {}).asset_tag || '-'}</b></div>
         <div class="row"><span>Battery</span><b>${status.battery_level != null ? status.battery_level + '%' : '-'}</b></div>
-        ${isInUse ? `<div class="holder-banner">📌 Dipakai: <b>${status.current_user || 'Unknown'}</b></div>` : ''}
+        ${isInUse ? `<div class="holder-banner">📌 Dipakai: <b>${status.current_user || 'Unknown'}</b>${status.employeeId ? ` <span style="color:#94a3b8; font-weight:400;">(${status.employeeId})</span>` : ''}</div>` : ''}
         ${pendingCmd ? `<div style="font-size:0.7rem; color:#f59e0b; margin-top:5px;">⏳ Waiting: ${status.command}</div>` : ''}
         <div class="actions">
           <button style="background:#991b1b; color:white;" onclick="sendCommand('${id}','LOCK')">Lock</button>
@@ -211,6 +232,46 @@ function renderDevices(devices) {
 
   flaggedDiv.innerHTML = flagged.length ? flagged.join('') : '<div class="empty">Tidak ada device dipakai.</div>';
   listDiv.innerHTML = normal.join('');
+}
+
+function toggleHistory(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+}
+
+function renderHistory(logs) {
+  const div = document.getElementById('history-list');
+  const deviceIds = Object.keys(logs || {});
+
+  if (!deviceIds.length) {
+    div.innerHTML = '<div class="empty">Belum ada riwayat penggunaan.</div>';
+    return;
+  }
+
+  div.innerHTML = deviceIds.map(devId => {
+    const entries = logs[devId] || {};
+    const logIds = Object.keys(entries).sort((a, b) => (entries[b].timestamp || 0) - (entries[a].timestamp || 0));
+    const bodyId = 'history-body-' + devId;
+
+    const rows = logIds.length ? logIds.map(lid => {
+      const l = entries[lid] || {};
+      const t = l.timestamp ? new Date(Number(l.timestamp)).toLocaleString('id-ID') : '-';
+      return `<div class="history-entry"><span>${l.event || '-'} · ${l.user || '-'}</span><b>${t}</b></div>`;
+    }).join('') : '<div class="empty" style="padding:0;">Belum ada log untuk device ini.</div>';
+
+    return `
+      <div class="history-card" onclick="toggleHistory('${bodyId}')">
+        <div class="history-head">
+          <div class="device-id">${devId}</div>
+          <span style="font-size:0.8rem; color:#94a3b8;">${logIds.length} riwayat ▾</span>
+        </div>
+        <div id="${bodyId}" class="history-body" style="display:none;">
+          ${rows}
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 function renderUsers(users) {
@@ -264,6 +325,17 @@ async function approveRequest(reqId, empId, name, devId) {
       method: "DELETE"
     });
 
+    // Catat riwayat: device ini mulai dipakai staff yang bersangkutan
+    await fetch(`${DATABASE_URL}/logs/${devId}.json`, {
+      method: "POST",
+      headers: { "Content-Type":"application/json" },
+      body: JSON.stringify({
+        event: "CHECKOUT",
+        user: `${name} (${empId})`,
+        timestamp: Date.now()
+      })
+    });
+
     showToast("✅ Login disetujui");
 
     fetchAll();
@@ -309,14 +381,16 @@ function renderRequests(requests) {
 
 async function fetchAll() {
   try {
-    const [devRes, userRes, reqRes] = await Promise.all([
+    const [devRes, userRes, reqRes, logRes] = await Promise.all([
       fetch(`${DATABASE_URL}/devices.json`),
       fetch(`${DATABASE_URL}/users.json`),
-      fetch(`${DATABASE_URL}/requests.json`)
+      fetch(`${DATABASE_URL}/requests.json`),
+      fetch(`${DATABASE_URL}/logs.json`)
     ]);
     renderRequests(await reqRes.json());
     renderDevices(await devRes.json());
     renderUsers(await userRes.json());
+    renderHistory(await logRes.json());
     document.getElementById('last-update').textContent = 'Update: ' + new Date().toLocaleTimeString();
   } catch (err) { console.error(err); }
 }
