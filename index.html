@@ -108,16 +108,72 @@ async function sendCommand(deviceId, action) {
   } catch (err) { showToast('Gagal: ' + err.message); }
 }
 
-async function forceCheckin(deviceId) {
-  try {
-    await fetch(`${DATABASE_URL}/devices/${deviceId}/status.json`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ current_status: 'AVAILABLE', current_user: '' })
+async function forceCheckin(deviceId){
+
+  try{
+
+    await fetch(`${DATABASE_URL}/devices/${deviceId}/status.json`,{
+
+      method:"PATCH",
+
+      headers:{
+        "Content-Type":"application/json"
+      },
+
+      body:JSON.stringify({
+
+        current_status:"AVAILABLE",
+
+        current_user:"",
+
+        employeeId:""
+
+      })
+
     });
-    showToast(`${deviceId} telah dikembalikan`);
+
+    const userRes=await fetch(`${DATABASE_URL}/users.json`);
+
+    const users=await userRes.json();
+
+    for(const empId in users){
+
+      if(users[empId].active_device===deviceId){
+
+        await fetch(`${DATABASE_URL}/users/${empId}.json`,{
+
+          method:"PATCH",
+
+          headers:{
+            "Content-Type":"application/json"
+          },
+
+          body:JSON.stringify({
+
+            active_device:"",
+
+            status:"IDLE"
+
+          })
+
+        });
+
+        break;
+
+      }
+
+    }
+
+    showToast("Device berhasil dikembalikan");
+
     fetchAll();
-  } catch (err) { showToast('Gagal: ' + err.message); }
+
+  }catch(e){
+
+    showToast(e.message);
+
+  }
+
 }
 
 function renderDevices(devices) {
