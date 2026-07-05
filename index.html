@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KunciPDA — Admin Panel</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root { --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --accent: #3b82f6; }
         body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
@@ -50,6 +51,10 @@
         .history-body { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
         .history-entry { display: flex; justify-content: space-between; font-size: 0.8rem; color: #cbd5e1; border-top: 1px solid #334155; padding-top: 6px; }
         .history-entry:first-child { border-top: none; padding-top: 0; }
+
+        /* Peta Lokasi Device */
+        #map { height: 320px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 8px; z-index: 0; }
+        .map-hint { font-size: 0.8rem; color: #64748b; margin-bottom: 12px; }
     </style>
 </head>
 <body>
@@ -69,6 +74,10 @@
     <div class="section-title">Semua Device</div>
     <div id="device-list"></div>
 
+    <div class="section-title">🗺️ Peta Lokasi Device</div>
+    <div id="map"></div>
+    <div class="map-hint" id="map-hint"></div>
+
     <div class="section-title">Daftar Staff</div>
     <div id="user-list"></div>
 
@@ -78,6 +87,7 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 // --- LOGIKA ANDA (DIPERTAHANKAN 100%) ---
 const DATABASE_URL = "https://kuncipda-default-rtdb.asia-southeast1.firebasedatabase.app";
@@ -274,6 +284,62 @@ function renderHistory(logs) {
   }).join('');
 }
 
+let map;
+let markersLayer;
+
+function initMap() {
+  // Default view: tengah Indonesia, di-zoom out dulu sebelum tahu lokasi device
+  map = L.map('map').setView([-2.5, 118], 5);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
+  markersLayer = L.layerGroup().addTo(map);
+}
+
+// App Android menyimpan lat/lng sebagai teks dengan KOMA sebagai desimal
+// (mis. "-6,914744"), bukan titik - jadi perlu dikonversi dulu sebelum di-parse.
+function parseCoord(val) {
+  if (val === undefined || val === null || val === '') return null;
+  const num = parseFloat(String(val).replace(',', '.'));
+  return isNaN(num) ? null : num;
+}
+
+function renderMap(devices) {
+  if (!map) return;
+  markersLayer.clearLayers();
+
+  const ids = Object.keys(devices || {});
+  const points = [];
+
+  ids.forEach(id => {
+    const dev = devices[id] || {};
+    const loc = dev.location || {};
+    const lat = parseCoord(loc.lat);
+    const lng = parseCoord(loc.lng);
+
+    // Lewati kalau belum ada data lokasi, atau masih 0,0 (GPS belum dapat fix pertama)
+    if (lat === null || lng === null || (lat === 0 && lng === 0)) return;
+
+    const status = (dev.status || {}).current_status || 'UNKNOWN';
+    const holder = (dev.status || {}).current_user;
+
+    const marker = L.marker([lat, lng]).bindPopup(
+      `<b>${id}</b><br>${status}${holder ? ' · ' + holder : ''}`
+    );
+    markersLayer.addLayer(marker);
+    points.push([lat, lng]);
+  });
+
+  const hint = document.getElementById('map-hint');
+  if (points.length) {
+    map.fitBounds(points, { maxZoom: 16, padding: [30, 30] });
+    hint.textContent = '';
+  } else {
+    hint.textContent = 'Belum ada device dengan lokasi valid (GPS mungkin belum aktif/belum dapat sinyal).';
+  }
+}
+
 async function deleteUser(id) {
   try {
     await fetch(`${DATABASE_URL}/users/${id}.json`, { method: 'DELETE' });
@@ -410,14 +476,17 @@ async function fetchAll() {
       fetch(`${DATABASE_URL}/requests.json`),
       fetch(`${DATABASE_URL}/logs.json`)
     ]);
+    const devices = await devRes.json();
     renderRequests(await reqRes.json());
-    renderDevices(await devRes.json());
+    renderDevices(devices);
+    renderMap(devices);
     renderUsers(await userRes.json());
     renderHistory(await logRes.json());
     document.getElementById('last-update').textContent = 'Update: ' + new Date().toLocaleTimeString();
   } catch (err) { console.error(err); }
 }
 
+initMap();
 fetchAll();
 setInterval(fetchAll, REFRESH_MS);
 </script>
