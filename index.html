@@ -218,15 +218,34 @@ function renderDevices(devices) {
     const status = d.status || {};
     const isInUse = (status.current_status || '').toUpperCase() === 'IN_USE';
     const pendingCmd = status.command && status.command !== 'NONE';
+    const nickname = (d.info || {}).nickname;
+
+    const loc = d.location || {};
+    const lat = parseCoord(loc.lat);
+    const lng = parseCoord(loc.lng);
+    const hasLocation = lat !== null && lng !== null && !(lat === 0 && lng === 0);
+    const mapThumb = hasLocation ? `
+      <a href="https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=17/${lat}/${lng}" target="_blank" rel="noopener">
+        <img src="https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lng}&zoom=15&size=400x140&markers=${lat},${lng},red-pushpin"
+             alt="Lokasi device" style="width:100%; border-radius:8px; margin-top:8px; display:block;">
+      </a>
+    ` : `<div style="font-size:0.75rem; color:#64748b; margin-top:8px;">📍 Lokasi belum tersedia</div>`;
 
     const cardHtml = (flaggedStyle) => `
       <div class="device-card">
         <div class="device-top">
-          <div class="device-id">${id}</div>
-          <span class="badge ${statusBadgeClass(status.current_status)}">${status.current_status || 'UNKNOWN'}</span>
+          <div>
+            <div class="device-id">${nickname ? nickname : id}</div>
+            ${nickname ? `<div style="font-size:0.7rem; color:#64748b;">${id}</div>` : ''}
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="badge ${statusBadgeClass(status.current_status)}">${status.current_status || 'UNKNOWN'}</span>
+            <button style="background:none; border:1px solid #334155; color:#94a3b8; border-radius:6px; padding:4px 8px; font-size:0.75rem; cursor:pointer;" onclick="setNickname('${id}')">✏️</button>
+          </div>
         </div>
         <div class="row"><span>Asset</span><b>${(d.info || {}).asset_tag || '-'}</b></div>
         <div class="row"><span>Battery</span><b>${status.battery_level != null ? status.battery_level + '%' : '-'}</b></div>
+        ${mapThumb}
         ${isInUse ? `<div class="holder-banner">📌 Dipakai: <b>${status.current_user || 'Unknown'}</b>${status.employeeId ? ` <span style="color:#94a3b8; font-weight:400;">(${status.employeeId})</span>` : ''}</div>` : ''}
         ${pendingCmd ? `<div style="font-size:0.7rem; color:#f59e0b; margin-top:5px;">⏳ Waiting: ${status.command}</div>` : ''}
         <div class="actions">
@@ -242,6 +261,23 @@ function renderDevices(devices) {
 
   flaggedDiv.innerHTML = flagged.length ? flagged.join('') : '<div class="empty">Tidak ada device dipakai.</div>';
   listDiv.innerHTML = normal.join('');
+}
+
+let lastDevices = {};
+
+async function setNickname(id) {
+  const current = (lastDevices[id] && lastDevices[id].info && lastDevices[id].info.nickname) || '';
+  const name = prompt('Nama panggilan untuk device ini (kosongkan untuk hapus):', current);
+  if (name === null) return; // dibatalkan
+  try {
+    await fetch(`${DATABASE_URL}/devices/${id}/info.json`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nickname: name })
+    });
+    showToast('Nama panggilan disimpan');
+    fetchAll();
+  } catch (err) { showToast('Gagal simpan nama: ' + err.message); }
 }
 
 function toggleHistory(id) {
@@ -323,9 +359,11 @@ function renderMap(devices) {
 
     const status = (dev.status || {}).current_status || 'UNKNOWN';
     const holder = (dev.status || {}).current_user;
+    const nickname = (dev.info || {}).nickname;
+    const label = nickname ? `${nickname} <span style="color:#888;">(${id})</span>` : id;
 
     const marker = L.marker([lat, lng]).bindPopup(
-      `<b>${id}</b><br>${status}${holder ? ' · ' + holder : ''}`
+      `<b>${label}</b><br>${status}${holder ? ' · ' + holder : ''}`
     );
     markersLayer.addLayer(marker);
     points.push([lat, lng]);
@@ -348,19 +386,23 @@ async function deleteUser(id) {
   } catch (err) { showToast('Gagal hapus: ' + err.message); }
 }
 
-function renderUsers(users) {
+function renderUsers(users, devices) {
   const div = document.getElementById('user-list');
   const ids = Object.keys(users || {});
   div.innerHTML = ids.length ? ids.map(id => {
     const u = users[id] || {};
     const isIdle = (u.status || '').toUpperCase() !== 'ACTIVE';
+    const devNick = u.active_device && devices && devices[u.active_device]
+      ? (devices[u.active_device].info || {}).nickname
+      : null;
+    const deviceLabel = u.active_device ? (devNick ? `${devNick} (${u.active_device})` : u.active_device) : '-';
     return `
     <div class="request-card" style="padding:10px;">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-weight:600;">${u.name || id} <span style="font-weight:400; color:#94a3b8;">(${id})</span></div>
           <div style="font-size:0.8rem; color:#94a3b8;">${u.role || '-'} · ${u.status || 'IDLE'}</div>
-          <div style="font-size:0.8rem; color:#94a3b8;">Device: ${u.active_device ? u.active_device : '-'}</div>
+          <div style="font-size:0.8rem; color:#94a3b8;">Device: ${deviceLabel}</div>
         </div>
         ${isIdle ? `<button style="flex:none; padding:6px 10px; background:#7f1d1d; color:white; border:none; border-radius:6px; font-size:0.75rem; cursor:pointer;" onclick="deleteUser('${id}')">Hapus</button>` : ''}
       </div>
@@ -487,10 +529,11 @@ async function fetchAll() {
       fetch(`${DATABASE_URL}/logs.json`)
     ]);
     const devices = await devRes.json();
+    lastDevices = devices || {};
     renderRequests(await reqRes.json());
     renderDevices(devices);
     renderMap(devices);
-    renderUsers(await userRes.json());
+    renderUsers(await userRes.json(), devices);
     renderHistory(await logRes.json());
     document.getElementById('last-update').textContent = 'Update: ' + new Date().toLocaleTimeString();
   } catch (err) { console.error(err); }
