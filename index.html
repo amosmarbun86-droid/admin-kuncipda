@@ -409,10 +409,12 @@ async function approveRequest(reqId, empId, name, devId) {
       })
     });
 
-    // Hapus request dari Firebase setelah disetujui
-    await fetch(`${DATABASE_URL}/requests/${reqId}.json`, {
-      method: "DELETE"
-    });
+    // Hapus request TIDAK dilakukan di sini lagi. App Android (MainActivity) sudah
+    // otomatis menghapus request ini sendiri (firebaseRequest.removeValue()) begitu
+    // dia berhasil memproses status "approved". Kalau dashboard ikut menghapus di sini,
+    // ada resiko request hilang SEBELUM app sempat menerima event "approved" (terutama
+    // kalau koneksi HP staff sedang tidak stabil) - staff jadi macet di spinner login
+    // selamanya. Membiarkan app yang hapus sendiri menjamin urutan selalu benar.
 
     // Catat riwayat: device ini mulai dipakai staff yang bersangkutan
     await fetch(`${DATABASE_URL}/logs/${devId}.json`, {
@@ -439,12 +441,20 @@ async function approveRequest(reqId, empId, name, devId) {
 
 async function rejectRequest(reqId, name) {
   try {
-    // Hapus request dari Firebase setelah ditolak
+    // PATCH status "rejected" dulu supaya app di HP staff (yang sedang menunggu event
+    // ini) bisa menampilkan teks "Ditolak oleh admin". Baru setelah dikasih jeda
+    // beberapa detik (supaya app pasti sempat menerima event ini), request dihapus.
     await fetch(`${DATABASE_URL}/requests/${reqId}.json`, {
-      method: 'DELETE'
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'rejected' })
     });
     showToast(`❌ Ditolak: ${name}`);
     fetchAll();
+
+    setTimeout(() => {
+      fetch(`${DATABASE_URL}/requests/${reqId}.json`, { method: 'DELETE' }).catch(() => {});
+    }, 4000);
   } catch (err) { showToast('Gagal: ' + err.message); }
 }
 
