@@ -146,7 +146,11 @@ async function forceCheckin(deviceId){
 
         current_user:"",
 
-        employeeId:""
+        employeeId:"",
+
+        // Perintah jarak jauh: begitu HP menerima ini, dia otomatis kembali
+        // ke layar login sendiri (mirip mekanisme LOCK/UNLOCK)
+        command:"CHECKIN"
 
       })
 
