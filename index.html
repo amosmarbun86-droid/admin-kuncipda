@@ -193,7 +193,9 @@ async function forceCheckin(deviceId){
           })
         });
 
-        break;
+        // TIDAK ada "break" di sini lagi - sengaja, supaya SEMUA staff yang
+        // (secara data) tercatat masih pegang device ini ikut direset semua,
+        // bukan cuma yang pertama ditemukan.
 
       }
 
@@ -427,6 +429,20 @@ async function approveRequest(reqId, empId, name, devId) {
       headers: { "Content-Type":"application/json" },
       body: JSON.stringify({ status: "approved" })
     });
+
+    // Cek dulu apakah device ini sebelumnya masih tercatat dipegang staff LAIN
+    // (yang belum sempat checkout). Kalau ada, reset staff lama itu ke IDLE dulu -
+    // supaya tidak ada 2 staff sekaligus tercatat ACTIVE pegang device yang sama.
+    const prevStatusRes = await fetch(`${DATABASE_URL}/devices/${devId}/status.json`);
+    const prevStatus = await prevStatusRes.json();
+    const prevEmpId = prevStatus && prevStatus.employeeId;
+    if (prevEmpId && prevEmpId !== empId) {
+      await fetch(`${DATABASE_URL}/users/${prevEmpId}.json`, {
+        method: "PATCH",
+        headers: { "Content-Type":"application/json" },
+        body: JSON.stringify({ active_device: "", status: "IDLE" })
+      });
+    }
 
     // Update user
     await fetch(`${DATABASE_URL}/users/${empId}.json`, {
