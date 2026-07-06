@@ -507,10 +507,19 @@ function renderRequests(requests) {
 
   div.innerHTML = pending.length ? pending.map(reqId => {
     const r = requests[reqId];
+    const ts = Number(r.requested_at);
+    const ageMinutes = ts ? (Date.now() - ts) / 60000 : null;
+    const isStale = ageMinutes !== null && ageMinutes > 15; // lebih dari 15 menit dianggap kemungkinan basi
+    const timeLabel = ts ? fmtTime(r.requested_at) : '-';
+
     return `
       <div class="request-card">
         <div class="request-name">${r.name || 'Staff'}</div>
-        <div class="request-meta">ID: ${r.employeeId} · Device: ${r.deviceId}</div>
+        <div class="request-meta">
+          ID: ${r.employeeId} · Device: ${r.deviceId}<br>
+          Diminta: ${timeLabel}
+          ${isStale ? ' <span style="color:#f59e0b; font-weight:600;">⚠️ Sudah lama, kemungkinan basi</span>' : ''}
+        </div>
         <div class="request-actions">
           <button class="btn-approve" onclick="approveRequest('${reqId}','${r.employeeId}','${r.name}','${r.deviceId}')">Setujui</button>
           <button class="btn-reject" onclick="rejectRequest('${reqId}','${r.name}')">Tolak</button>
