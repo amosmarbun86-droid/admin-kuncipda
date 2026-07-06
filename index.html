@@ -537,13 +537,22 @@ async function fetchAll() {
       fetch(`${DATABASE_URL}/requests.json`),
       fetch(`${DATABASE_URL}/logs.json`)
     ]);
-    const devices = await devRes.json();
+
+    // Kalau Firebase menolak (mis. permission denied), jangan anggap responsnya
+    // sebagai data asli - pakai objek kosong sebagai gantinya supaya tidak salah tampil.
+    const safeJson = async (res) => {
+      if (!res.ok) return {};
+      const data = await res.json();
+      return (data && typeof data === 'object') ? data : {};
+    };
+
+    const devices = await safeJson(devRes);
     lastDevices = devices || {};
-    renderRequests(await reqRes.json());
+    renderRequests(await safeJson(reqRes));
     renderDevices(devices);
     renderMap(devices);
-    renderUsers(await userRes.json(), devices);
-    renderHistory(await logRes.json());
+    renderUsers(await safeJson(userRes), devices);
+    renderHistory(await safeJson(logRes));
     document.getElementById('last-update').textContent = 'Update: ' + new Date().toLocaleTimeString();
   } catch (err) { console.error(err); }
 }
