@@ -59,10 +59,24 @@
 </head>
 <body>
 
+<div id="login-screen" style="min-height:100vh; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px; padding:20px;">
+  <h2 style="margin:0;">🔐 KunciPDA Admin</h2>
+  <div style="width:100%; max-width:320px; display:flex; flex-direction:column; gap:10px;">
+    <input id="login-email" type="email" placeholder="Email" style="padding:12px; border-radius:8px; border:1px solid #334155; background:#1e293b; color:#f8fafc;">
+    <input id="login-password" type="password" placeholder="Password" style="padding:12px; border-radius:8px; border:1px solid #334155; background:#1e293b; color:#f8fafc;">
+    <button onclick="doLogin()" style="padding:12px; border-radius:8px; border:none; background:#3b82f6; color:white; font-weight:600; cursor:pointer;">Login</button>
+    <div id="login-error" style="color:#f87171; font-size:0.85rem;"></div>
+  </div>
+</div>
+
+<div id="app-content" style="display:none;">
 <main>
-    <header>
+    <header style="display:flex; justify-content:space-between; align-items:center;">
+      <div>
         <h1>🔐 KunciPDA Admin</h1>
         <div class="sub" id="last-update">Menghubungkan ke database...</div>
+      </div>
+      <button onclick="doLogout()" style="background:none; border:1px solid #334155; color:#94a3b8; border-radius:8px; padding:8px 12px; cursor:pointer; height:fit-content;">Logout</button>
     </header>
 
     <div class="section-title">⏳ Menunggu Persetujuan</div>
@@ -86,12 +100,116 @@
 </main>
 
 <div class="toast" id="toast"></div>
+</div>
+
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 // --- LOGIKA ANDA (DIPERTAHANKAN 100%) ---
 const DATABASE_URL = "https://kuncipda-default-rtdb.asia-southeast1.firebasedatabase.app";
 const REFRESH_MS = 5000;
+
+// ===== AUTENTIKASI ADMIN =====
+const FIREBASE_API_KEY = "AIzaSyCB4GOEL2OqHERDwTOpjYOvcby1o2ZqJHg";
+const AUTH_SIGNIN_URL = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_API_KEY}`;
+const AUTH_REFRESH_URL = `https://securetoken.googleapis.com/v1/token?key=${FIREBASE_API_KEY}`;
+const SESSION_KEY = 'kuncipda_session';
+
+let idToken = null;
+let refreshTokenValue = null;
+let tokenExpiry = 0;
+let refreshTimer = null;
+
+function saveSession(data) {
+  idToken = data.idToken || data.id_token;
+  refreshTokenValue = data.refreshToken || data.refresh_token;
+  const expiresIn = Number(data.expiresIn || data.expires_in || 3600);
+  tokenExpiry = Date.now() + expiresIn * 1000;
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ idToken, refreshTokenValue, tokenExpiry }));
+}
+
+function loadSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (!data.idToken || !data.refreshTokenValue) return false;
+    idToken = data.idToken;
+    refreshTokenValue = data.refreshTokenValue;
+    tokenExpiry = data.tokenExpiry || 0;
+    return true;
+  } catch (e) { return false; }
+}
+
+function clearSession() {
+  idToken = null; refreshTokenValue = null; tokenExpiry = 0;
+  localStorage.removeItem(SESSION_KEY);
+}
+
+async function refreshIdToken() {
+  const res = await fetch(AUTH_REFRESH_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=refresh_token&refresh_token=${encodeURIComponent(refreshTokenValue)}`
+  });
+  if (!res.ok) throw new Error('Sesi login berakhir, silakan login lagi');
+  const data = await res.json();
+  saveSession(data);
+}
+
+async function ensureValidToken() {
+  if (!idToken) throw new Error('Belum login');
+  if (Date.now() > tokenExpiry - 60000) {
+    await refreshIdToken();
+  }
+}
+
+// Pengganti fetch(`${DATABASE_URL}...`) biasa - otomatis menyisipkan token login
+// yang valid, dan otomatis refresh token kalau sudah mau kedaluwarsa.
+async function authFetch(path, options = {}) {
+  await ensureValidToken();
+  const sep = path.includes('?') ? '&' : '?';
+  return fetch(`${DATABASE_URL}${path}${sep}auth=${idToken}`, options);
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+  try {
+    const res = await fetch(AUTH_SIGNIN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, returnSecureToken: true })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      const msg = (data.error && data.error.message) || 'Login gagal';
+      throw new Error(msg);
+    }
+    saveSession(data);
+    showApp();
+  } catch (err) {
+    errEl.textContent = 'Login gagal: ' + err.message;
+  }
+}
+
+function doLogout() {
+  clearSession();
+  if (refreshTimer) clearInterval(refreshTimer);
+  document.getElementById('app-content').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-content').style.display = 'block';
+  initMap();
+  fetchAll();
+  refreshTimer = setInterval(fetchAll, REFRESH_MS);
+}
+// ===== AKHIR AUTENTIKASI =====
 
 function showToast(msg) {
   const t = document.getElementById('toast');
@@ -118,7 +236,7 @@ function fmtTime(ts) {
 
 async function sendCommand(deviceId, action) {
   try {
-    await fetch(`${DATABASE_URL}/devices/${deviceId}/status.json`, {
+    await authFetch(`/devices/${deviceId}/status.json`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ command: action })
@@ -132,7 +250,7 @@ async function forceCheckin(deviceId){
 
   try{
 
-    await fetch(`${DATABASE_URL}/devices/${deviceId}/status.json`,{
+    await authFetch(`/devices/${deviceId}/status.json`,{
 
       method:"PATCH",
 
@@ -156,7 +274,7 @@ async function forceCheckin(deviceId){
 
     });
 
-    const userRes=await fetch(`${DATABASE_URL}/users.json`);
+    const userRes=await authFetch(`/users.json`);
 
     const users=await userRes.json();
 
@@ -164,7 +282,7 @@ async function forceCheckin(deviceId){
 
       if(users[empId].active_device===deviceId){
 
-        await fetch(`${DATABASE_URL}/users/${empId}.json`,{
+        await authFetch(`/users/${empId}.json`,{
 
           method:"PATCH",
 
@@ -183,7 +301,7 @@ async function forceCheckin(deviceId){
         });
 
         // Catat riwayat: device ini dikembalikan oleh staff yang bersangkutan
-        await fetch(`${DATABASE_URL}/logs/${deviceId}.json`, {
+        await authFetch(`/logs/${deviceId}.json`, {
           method: "POST",
           headers: { "Content-Type":"application/json" },
           body: JSON.stringify({
@@ -223,6 +341,7 @@ function renderDevices(devices) {
     const d = devices[id] || {};
     const status = d.status || {};
     const isInUse = (status.current_status || '').toUpperCase() === 'IN_USE';
+    const isLocked = status.locked === true;
     const pendingCmd = status.command && status.command !== 'NONE';
     const nickname = (d.info || {}).nickname;
 
@@ -246,6 +365,7 @@ function renderDevices(devices) {
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
             <span class="badge ${statusBadgeClass(status.current_status)}">${status.current_status || 'UNKNOWN'}</span>
+            ${isLocked ? `<span class="badge locked">🔒 TERKUNCI</span>` : ''}
             <button style="background:none; border:1px solid #334155; color:#94a3b8; border-radius:6px; padding:4px 8px; font-size:0.75rem; cursor:pointer;" onclick="setNickname('${id}')">✏️</button>
           </div>
         </div>
@@ -276,7 +396,7 @@ async function setNickname(id) {
   const name = prompt('Nama panggilan untuk device ini (kosongkan untuk hapus):', current);
   if (name === null) return; // dibatalkan
   try {
-    await fetch(`${DATABASE_URL}/devices/${id}/info.json`, {
+    await authFetch(`/devices/${id}/info.json`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nickname: name })
@@ -286,10 +406,18 @@ async function setNickname(id) {
   } catch (err) { showToast('Gagal simpan nama: ' + err.message); }
 }
 
+const expandedHistory = new Set();
+
 function toggleHistory(id) {
   const el = document.getElementById(id);
   if (!el) return;
-  el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+  const isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'flex';
+  if (isOpen) {
+    expandedHistory.delete(id);
+  } else {
+    expandedHistory.add(id);
+  }
 }
 
 function renderHistory(logs) {
@@ -305,6 +433,7 @@ function renderHistory(logs) {
     const entries = logs[devId] || {};
     const logIds = Object.keys(entries).sort((a, b) => (entries[b].timestamp || 0) - (entries[a].timestamp || 0));
     const bodyId = 'history-body-' + devId;
+    const isOpen = expandedHistory.has(bodyId);
 
     const rows = logIds.length ? logIds.map(lid => {
       const l = entries[lid] || {};
@@ -318,7 +447,7 @@ function renderHistory(logs) {
           <div class="device-id">${devId}</div>
           <span style="font-size:0.8rem; color:#94a3b8;">${logIds.length} riwayat ▾</span>
         </div>
-        <div id="${bodyId}" class="history-body" style="display:none;">
+        <div id="${bodyId}" class="history-body" style="display:${isOpen ? 'flex' : 'none'};">
           ${rows}
         </div>
       </div>
@@ -386,7 +515,7 @@ function renderMap(devices) {
 
 async function deleteUser(id) {
   try {
-    await fetch(`${DATABASE_URL}/users/${id}.json`, { method: 'DELETE' });
+    await authFetch(`/users/${id}.json`, { method: 'DELETE' });
     showToast(`Staff ${id} dihapus`);
     fetchAll();
   } catch (err) { showToast('Gagal hapus: ' + err.message); }
@@ -424,7 +553,7 @@ async function approveRequest(reqId, empId, name, devId) {
     // Set status "approved" dulu - INI WAJIB ADA supaya app Android (MainActivity)
     // yang sedang menunggu event ini bisa pindah ke halaman Home. Kalau langkah ini
     // dilewati, app di HP staff akan macet di spinner "Mengirim permintaan..." selamanya.
-    await fetch(`${DATABASE_URL}/requests/${reqId}.json`, {
+    await authFetch(`/requests/${reqId}.json`, {
       method: "PATCH",
       headers: { "Content-Type":"application/json" },
       body: JSON.stringify({ status: "approved" })
@@ -433,11 +562,11 @@ async function approveRequest(reqId, empId, name, devId) {
     // Cek dulu apakah device ini sebelumnya masih tercatat dipegang staff LAIN
     // (yang belum sempat checkout). Kalau ada, reset staff lama itu ke IDLE dulu -
     // supaya tidak ada 2 staff sekaligus tercatat ACTIVE pegang device yang sama.
-    const prevStatusRes = await fetch(`${DATABASE_URL}/devices/${devId}/status.json`);
+    const prevStatusRes = await authFetch(`/devices/${devId}/status.json`);
     const prevStatus = await prevStatusRes.json();
     const prevEmpId = prevStatus && prevStatus.employeeId;
     if (prevEmpId && prevEmpId !== empId) {
-      await fetch(`${DATABASE_URL}/users/${prevEmpId}.json`, {
+      await authFetch(`/users/${prevEmpId}.json`, {
         method: "PATCH",
         headers: { "Content-Type":"application/json" },
         body: JSON.stringify({ active_device: "", status: "IDLE" })
@@ -445,7 +574,7 @@ async function approveRequest(reqId, empId, name, devId) {
     }
 
     // Update user
-    await fetch(`${DATABASE_URL}/users/${empId}.json`, {
+    await authFetch(`/users/${empId}.json`, {
       method:"PATCH",
       headers:{
         "Content-Type":"application/json"
@@ -458,7 +587,7 @@ async function approveRequest(reqId, empId, name, devId) {
     });
 
     // Update device
-    await fetch(`${DATABASE_URL}/devices/${devId}/status.json`, {
+    await authFetch(`/devices/${devId}/status.json`, {
       method:"PATCH",
       headers:{
         "Content-Type":"application/json"
@@ -479,7 +608,7 @@ async function approveRequest(reqId, empId, name, devId) {
     // selamanya. Membiarkan app yang hapus sendiri menjamin urutan selalu benar.
 
     // Catat riwayat: device ini mulai dipakai staff yang bersangkutan
-    await fetch(`${DATABASE_URL}/logs/${devId}.json`, {
+    await authFetch(`/logs/${devId}.json`, {
       method: "POST",
       headers: { "Content-Type":"application/json" },
       body: JSON.stringify({
@@ -506,7 +635,7 @@ async function rejectRequest(reqId, name) {
     // PATCH status "rejected" dulu supaya app di HP staff (yang sedang menunggu event
     // ini) bisa menampilkan teks "Ditolak oleh admin". Baru setelah dikasih jeda
     // beberapa detik (supaya app pasti sempat menerima event ini), request dihapus.
-    await fetch(`${DATABASE_URL}/requests/${reqId}.json`, {
+    await authFetch(`/requests/${reqId}.json`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'rejected' })
@@ -515,7 +644,7 @@ async function rejectRequest(reqId, name) {
     fetchAll();
 
     setTimeout(() => {
-      fetch(`${DATABASE_URL}/requests/${reqId}.json`, { method: 'DELETE' }).catch(() => {});
+      authFetch(`/requests/${reqId}.json`, { method: 'DELETE' }).catch(() => {});
     }, 4000);
   } catch (err) { showToast('Gagal: ' + err.message); }
 }
@@ -552,10 +681,10 @@ function renderRequests(requests) {
 async function fetchAll() {
   try {
     const [devRes, userRes, reqRes, logRes] = await Promise.all([
-      fetch(`${DATABASE_URL}/devices.json`),
-      fetch(`${DATABASE_URL}/users.json`),
-      fetch(`${DATABASE_URL}/requests.json`),
-      fetch(`${DATABASE_URL}/logs.json`)
+      authFetch(`/devices.json`),
+      authFetch(`/users.json`),
+      authFetch(`/requests.json`),
+      authFetch(`/logs.json`)
     ]);
 
     // Kalau Firebase menolak (mis. permission denied), jangan anggap responsnya
@@ -577,9 +706,13 @@ async function fetchAll() {
   } catch (err) { console.error(err); }
 }
 
-initMap();
-fetchAll();
-setInterval(fetchAll, REFRESH_MS);
+// Kalau ada sesi login tersimpan (dari kunjungan sebelumnya), langsung masuk.
+// Kalau tidak, tampilkan halaman login dulu.
+if (loadSession()) {
+  showApp();
+} else {
+  document.getElementById('login-screen').style.display = 'flex';
+}
 </script>
 </body>
 </html>
