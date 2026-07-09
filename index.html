@@ -420,6 +420,25 @@ function toggleHistory(id) {
   }
 }
 
+async function deleteLogEntry(deviceId, logId, event) {
+  if (event) event.stopPropagation(); // supaya tidak ikut toggle buka/tutup card
+  try {
+    await authFetch(`/logs/${deviceId}/${logId}.json`, { method: 'DELETE' });
+    showToast('Riwayat dihapus');
+    fetchAll();
+  } catch (err) { showToast('Gagal hapus: ' + err.message); }
+}
+
+async function deleteAllLogsForDevice(deviceId, event) {
+  if (event) event.stopPropagation();
+  if (!confirm(`Hapus SEMUA riwayat untuk ${deviceId}? Tindakan ini tidak bisa dibatalkan.`)) return;
+  try {
+    await authFetch(`/logs/${deviceId}.json`, { method: 'DELETE' });
+    showToast('Semua riwayat device ini dihapus');
+    fetchAll();
+  } catch (err) { showToast('Gagal hapus: ' + err.message); }
+}
+
 function renderHistory(logs) {
   const div = document.getElementById('history-list');
   const deviceIds = Object.keys(logs || {});
@@ -438,14 +457,24 @@ function renderHistory(logs) {
     const rows = logIds.length ? logIds.map(lid => {
       const l = entries[lid] || {};
       const t = l.timestamp ? new Date(Number(l.timestamp)).toLocaleString('id-ID') : '-';
-      return `<div class="history-entry"><span>${l.event || '-'} · ${l.user || '-'}</span><b>${t}</b></div>`;
+      return `
+        <div class="history-entry" style="align-items:center;">
+          <span>${l.event || '-'} · ${l.user || '-'}</span>
+          <span style="display:flex; align-items:center; gap:8px;">
+            <b>${t}</b>
+            <button onclick="deleteLogEntry('${devId}','${lid}', event)" style="background:none; border:none; color:#f87171; cursor:pointer; font-size:0.9rem; padding:0 4px;" title="Hapus riwayat ini">🗑️</button>
+          </span>
+        </div>`;
     }).join('') : '<div class="empty" style="padding:0;">Belum ada log untuk device ini.</div>';
 
     return `
       <div class="history-card" onclick="toggleHistory('${bodyId}')">
         <div class="history-head">
           <div class="device-id">${devId}</div>
-          <span style="font-size:0.8rem; color:#94a3b8;">${logIds.length} riwayat ▾</span>
+          <span style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:0.8rem; color:#94a3b8;">${logIds.length} riwayat ▾</span>
+            ${logIds.length ? `<button onclick="deleteAllLogsForDevice('${devId}', event)" style="background:none; border:1px solid #7f1d1d; color:#f87171; border-radius:6px; padding:3px 8px; font-size:0.7rem; cursor:pointer;" title="Hapus semua riwayat device ini">Hapus Semua</button>` : ''}
+          </span>
         </div>
         <div id="${bodyId}" class="history-body" style="display:${isOpen ? 'flex' : 'none'};">
           ${rows}
