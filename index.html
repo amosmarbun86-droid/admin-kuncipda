@@ -585,6 +585,10 @@ function renderDevices(devices) {
           <button style="background:var(--success); color:#071A10;" onclick="sendCommand('${id}','UNLOCK')">Unlock</button>
           ${isInUse ? `<button style="background:transparent; border:1px solid rgba(198,161,91,0.45); color:var(--accent-text);" onclick="forceCheckin('${id}')">Check-in</button>` : ''}
         </div>
+        <div class="actions" style="margin-top:8px;">
+          <button style="background:transparent; border:1px solid rgba(214,138,60,0.45); color:var(--warning);" onclick="sendCommand('${id}','ALARM')">🔊 Bunyikan Alarm</button>
+          <button style="background:transparent; border:1px solid var(--border); color:var(--text-muted);" onclick="sendCommand('${id}','STOP_ALARM')">Hentikan Alarm</button>
+        </div>
       </div>
     `;
     if (isInUse) flagged.push(cardHtml(true));
