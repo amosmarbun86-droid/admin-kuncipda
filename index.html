@@ -282,7 +282,10 @@
         <h1>KunciPDA Admin</h1>
         <div class="sub" id="last-update">Menghubungkan ke database...</div>
       </div>
-      <button onclick="doLogout()" class="logout-btn">Keluar</button>
+      <div style="display:flex; gap:8px;">
+        <button onclick="exportPDF()" class="logout-btn" style="border-color:var(--accent); color:var(--accent-text);">Unduh Laporan PDF</button>
+        <button onclick="doLogout()" class="logout-btn">Keluar</button>
+      </div>
     </header>
 
     <div class="section-title">Menunggu Persetujuan</div>
@@ -333,6 +336,8 @@
 
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 // --- LOGIKA ANDA (DIPERTAHANKAN 100%) ---
 const DATABASE_URL = "https://kuncipda-default-rtdb.asia-southeast1.firebasedatabase.app";
@@ -662,6 +667,8 @@ function renderDevices(devices) {
 }
 
 let lastDevices = {};
+let lastUsers = {};
+let lastLogs = {};
 
 async function setNickname(id) {
   const current = (lastDevices[id] && lastDevices[id].info && lastDevices[id].info.nickname) || '';
@@ -979,7 +986,129 @@ function renderRequests(requests) {
   }).join('') : '<div class="empty">Tidak ada permintaan login.</div>';
 }
 
-async function fetchAll() {
+function exportPDF() {
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const now = new Date();
+    const generatedAt = now.toLocaleString('id-ID');
+
+    // ===== Header =====
+    doc.setFontSize(18);
+    doc.setFont(undefined, 'bold');
+    doc.text('KunciPDA — Laporan Operasional', 14, 18);
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(120);
+    doc.text(`Dibuat: ${generatedAt}`, 14, 24);
+    doc.setTextColor(0);
+
+    const deviceIds = Object.keys(lastDevices || {});
+    const totalDevices = deviceIds.length;
+    const inUseCount = deviceIds.filter(id => ((lastDevices[id].status || {}).current_status || '').toUpperCase() === 'IN_USE').length;
+    const availableCount = deviceIds.filter(id => ((lastDevices[id].status || {}).current_status || '').toUpperCase() === 'AVAILABLE').length;
+    const lockedCount = deviceIds.filter(id => (lastDevices[id].status || {}).locked === true).length;
+
+    // ===== Ringkasan =====
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('Ringkasan', 14, 34);
+    doc.autoTable({
+      startY: 38,
+      head: [['Total Device', 'Sedang Dipakai', 'Tersedia', 'Sedang Terkunci']],
+      body: [[String(totalDevices), String(inUseCount), String(availableCount), String(lockedCount)]],
+      theme: 'grid',
+      headStyles: { fillColor: [30, 34, 48] },
+      styles: { fontSize: 9 }
+    });
+
+    // ===== Tabel Device =====
+    let y = doc.lastAutoTable.finalY + 12;
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('Daftar Device', 14, y);
+    const deviceRows = deviceIds.map(id => {
+      const d = lastDevices[id] || {};
+      const status = d.status || {};
+      const nickname = (d.info || {}).nickname || '-';
+      return [
+        nickname,
+        id,
+        status.current_status || 'UNKNOWN',
+        status.locked ? 'Ya' : 'Tidak',
+        status.battery_level != null ? `${status.battery_level}%` : '-',
+        status.current_user || '-'
+      ];
+    });
+    doc.autoTable({
+      startY: y + 4,
+      head: [['Nama', 'ID Device', 'Status', 'Terkunci', 'Baterai', 'Dipakai Oleh']],
+      body: deviceRows.length ? deviceRows : [['-', '-', '-', '-', '-', '-']],
+      theme: 'striped',
+      headStyles: { fillColor: [30, 34, 48] },
+      styles: { fontSize: 8 }
+    });
+
+    // ===== Tabel Staff =====
+    y = doc.lastAutoTable.finalY + 12;
+    if (y > 250) { doc.addPage(); y = 20; }
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('Daftar Staff', 14, y);
+    const userIds = Object.keys(lastUsers || {});
+    const userRows = userIds.map(id => {
+      const u = lastUsers[id] || {};
+      return [u.name || '-', id, u.role || '-', u.status || 'IDLE', u.active_device || '-'];
+    });
+    doc.autoTable({
+      startY: y + 4,
+      head: [['Nama', 'ID Karyawan', 'Role', 'Status', 'Device Dipegang']],
+      body: userRows.length ? userRows : [['-', '-', '-', '-', '-']],
+      theme: 'striped',
+      headStyles: { fillColor: [30, 34, 48] },
+      styles: { fontSize: 8 }
+    });
+
+    // ===== Tabel Riwayat =====
+    y = doc.lastAutoTable.finalY + 12;
+    if (y > 240) { doc.addPage(); y = 20; }
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('Riwayat Penggunaan', 14, y);
+
+    const historyRows = [];
+    Object.keys(lastLogs || {}).forEach(devId => {
+      const entries = lastLogs[devId] || {};
+      Object.keys(entries).forEach(logId => {
+        const l = entries[logId] || {};
+        historyRows.push({
+          ts: Number(l.timestamp) || 0,
+          row: [devId, l.event || '-', l.user || '-', l.timestamp ? new Date(Number(l.timestamp)).toLocaleString('id-ID') : '-']
+        });
+      });
+    });
+    historyRows.sort((a, b) => b.ts - a.ts);
+    const sortedRows = historyRows.slice(0, 100).map(r => r.row); // batasi 100 entri terbaru biar file tidak kegemukan
+
+    doc.autoTable({
+      startY: y + 4,
+      head: [['Device', 'Event', 'Staff', 'Waktu']],
+      body: sortedRows.length ? sortedRows : [['-', '-', '-', '-']],
+      theme: 'striped',
+      headStyles: { fillColor: [30, 34, 48] },
+      styles: { fontSize: 8 }
+    });
+
+    const fileDate = now.toISOString().slice(0, 10);
+    doc.save(`KunciPDA-Laporan-${fileDate}.pdf`);
+    showToast('Laporan PDF berhasil dibuat');
+  } catch (err) {
+    console.error(err);
+    showToast('Gagal membuat PDF: ' + err.message);
+  }
+}
+
+
   try {
     const [devRes, userRes, reqRes, logRes] = await Promise.all([
       authFetch(`/devices.json`),
@@ -998,11 +1127,15 @@ async function fetchAll() {
 
     const devices = await safeJson(devRes);
     lastDevices = devices || {};
+    const users = await safeJson(userRes);
+    lastUsers = users || {};
+    const logs = await safeJson(logRes);
+    lastLogs = logs || {};
     renderRequests(await safeJson(reqRes));
     renderDevices(devices);
     renderMap(devices);
-    renderUsers(await safeJson(userRes), devices);
-    renderHistory(await safeJson(logRes));
+    renderUsers(users, devices);
+    renderHistory(logs);
     document.getElementById('last-update').textContent = 'Update: ' + new Date().toLocaleTimeString();
   } catch (err) { console.error(err); }
 }
