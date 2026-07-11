@@ -1109,6 +1109,7 @@ function exportPDF() {
 }
 
 
+async function fetchAll() {
   try {
     const [devRes, userRes, reqRes, logRes] = await Promise.all([
       authFetch(`/devices.json`),
