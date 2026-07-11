@@ -306,6 +306,29 @@
 </main>
 
 <div class="toast" id="toast"></div>
+
+<div id="lock-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center; padding:20px;">
+  <div style="background:var(--card); border:1px solid var(--border); border-top:2px solid var(--accent); border-radius:12px; padding:24px; width:100%; max-width:400px;">
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:0.68rem; letter-spacing:0.12em; color:var(--accent-text); text-transform:uppercase; margin-bottom:8px;">Kunci Device</div>
+    <div style="font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:1.1rem; margin-bottom:16px;">Kirim pesan peringatan?</div>
+
+    <select id="lock-template-select" onchange="onLockTemplateChange()" style="width:100%; padding:10px; border-radius:7px; border:1px solid var(--border); background:var(--bg-elevated); color:var(--text); font-family:'Inter',sans-serif; font-size:0.85rem; margin-bottom:10px;">
+      <option value="">Tanpa pesan (kunci biasa)</option>
+      <option value="Device ini terkunci karena belum dikembalikan sesuai jadwal.">Belum dikembalikan sesuai jadwal</option>
+      <option value="Segera hubungi admin untuk konfirmasi penggunaan device ini.">Hubungi admin untuk konfirmasi</option>
+      <option value="Device dikunci sementara untuk pemeliharaan.">Pemeliharaan sementara</option>
+      <option value="Penggunaan device ini mencurigakan, dikunci untuk verifikasi.">Aktivitas mencurigakan</option>
+      <option value="__custom__">Tulis pesan sendiri...</option>
+    </select>
+
+    <textarea id="lock-custom-message" placeholder="Tulis pesan peringatan..." style="display:none; width:100%; min-height:80px; padding:10px; border-radius:7px; border:1px solid var(--border); background:var(--bg-elevated); color:var(--text); font-family:'Inter',sans-serif; font-size:0.85rem; margin-bottom:10px; resize:vertical;"></textarea>
+
+    <div style="display:flex; gap:10px; margin-top:8px;">
+      <button onclick="closeLockDialog()" style="flex:1; padding:11px; border-radius:7px; border:1px solid var(--border); background:transparent; color:var(--text-muted); cursor:pointer; font-weight:600;">Batal</button>
+      <button onclick="confirmLock()" style="flex:1; padding:11px; border-radius:7px; border:none; background:var(--danger); color:white; cursor:pointer; font-weight:600;">Kunci Device</button>
+    </div>
+  </div>
+</div>
 </div>
 
 
@@ -440,16 +463,54 @@ function fmtTime(ts) {
   return d.toLocaleString('id-ID');
 }
 
-async function sendCommand(deviceId, action) {
+async function sendCommand(deviceId, action, lockMessage) {
   try {
+    const body = { command: action };
+    if (action === 'LOCK') {
+      body.lock_message = lockMessage || '';
+    }
     await authFetch(`/devices/${deviceId}/status.json`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ command: action })
+      body: JSON.stringify(body)
     });
     showToast(`Perintah "${action}" terkirim ke ${deviceId}`);
     fetchAll();
   } catch (err) { showToast('Gagal: ' + err.message); }
+}
+
+let lockTargetDevice = null;
+
+function openLockDialog(id) {
+  lockTargetDevice = id;
+  document.getElementById('lock-template-select').value = '';
+  document.getElementById('lock-custom-message').style.display = 'none';
+  document.getElementById('lock-custom-message').value = '';
+  document.getElementById('lock-modal').style.display = 'flex';
+}
+
+function closeLockDialog() {
+  document.getElementById('lock-modal').style.display = 'none';
+  lockTargetDevice = null;
+}
+
+function onLockTemplateChange() {
+  const select = document.getElementById('lock-template-select');
+  const customBox = document.getElementById('lock-custom-message');
+  customBox.style.display = select.value === '__custom__' ? 'block' : 'none';
+}
+
+function confirmLock() {
+  if (!lockTargetDevice) return;
+  const select = document.getElementById('lock-template-select');
+  let message = '';
+  if (select.value === '__custom__') {
+    message = document.getElementById('lock-custom-message').value.trim();
+  } else {
+    message = select.value;
+  }
+  sendCommand(lockTargetDevice, 'LOCK', message);
+  closeLockDialog();
 }
 
 async function forceCheckin(deviceId){
@@ -579,9 +640,10 @@ function renderDevices(devices) {
         <div class="row"><span>Battery</span><b>${status.battery_level != null ? status.battery_level + '%' : '-'}</b></div>
         ${mapThumb}
         ${isInUse ? `<div class="holder-banner">📌 Dipakai: <b>${status.current_user || 'Unknown'}</b>${status.employeeId ? ` <span style="color:var(--text-muted); font-weight:400;">(${status.employeeId})</span>` : ''}</div>` : ''}
+        ${isLocked && status.lock_message ? `<div style="margin-top:8px; padding:10px 12px; background:var(--danger-dim); border:1px solid rgba(193,68,59,0.3); border-radius:7px; font-size:0.8rem; color:#F0A8A2;">📨 ${status.lock_message}</div>` : ''}
         ${pendingCmd ? `<div style="font-size:0.7rem; color:var(--warning); margin-top:5px;">⏳ Waiting: ${status.command}</div>` : ''}
         <div class="actions">
-          <button style="background:transparent; border:1px solid rgba(193,68,59,0.45); color:var(--danger);" onclick="sendCommand('${id}','LOCK')">Lock</button>
+          <button style="background:transparent; border:1px solid rgba(193,68,59,0.45); color:var(--danger);" onclick="openLockDialog('${id}')">Lock</button>
           <button style="background:var(--success); color:#071A10;" onclick="sendCommand('${id}','UNLOCK')">Unlock</button>
           ${isInUse ? `<button style="background:transparent; border:1px solid rgba(198,161,91,0.45); color:var(--accent-text);" onclick="forceCheckin('${id}')">Check-in</button>` : ''}
         </div>
