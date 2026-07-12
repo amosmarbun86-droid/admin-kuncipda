@@ -306,6 +306,9 @@
 
     <div class="section-title">Riwayat Penggunaan</div>
     <div id="history-list"></div>
+
+    <div class="section-title">Peringatan Keamanan</div>
+    <div id="security-alerts-list"></div>
 </main>
 
 <div class="toast" id="toast"></div>
@@ -716,6 +719,43 @@ async function deleteAllLogsForDevice(deviceId, event) {
     showToast('Semua riwayat device ini dihapus');
     fetchAll();
   } catch (err) { showToast('Gagal hapus: ' + err.message); }
+}
+
+function renderSecurityAlerts(devices) {
+  const div = document.getElementById('security-alerts-list');
+  const ids = Object.keys(devices || {});
+  const allAlerts = [];
+
+  ids.forEach(devId => {
+    const alerts = (devices[devId] || {}).security_alerts || {};
+    Object.keys(alerts).forEach(alertId => {
+      const a = alerts[alertId] || {};
+      allAlerts.push({ devId, alertId, ...a });
+    });
+  });
+
+  if (!allAlerts.length) {
+    div.innerHTML = '<div class="empty">Belum ada peringatan keamanan.</div>';
+    return;
+  }
+
+  allAlerts.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+  div.innerHTML = allAlerts.slice(0, 30).map(a => {
+    const nickname = (lastDevices[a.devId] && lastDevices[a.devId].info || {}).nickname;
+    const label = nickname ? `${nickname} (${a.devId})` : a.devId;
+    const t = a.timestamp ? new Date(Number(a.timestamp)).toLocaleString('id-ID') : '-';
+    return `
+      <div class="device-card" style="border-left-color: var(--danger);">
+        <div class="device-top">
+          <div class="device-id" style="font-size:0.85rem;">${label}</div>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:0.72rem; color:var(--text-faint);">${t}</span>
+        </div>
+        <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">${a.reason || 'Percobaan keluar dari layar kunci'}</div>
+        ${a.photo_url ? `<a href="${a.photo_url}" target="_blank" rel="noopener"><img src="${a.photo_url}" alt="Foto keamanan" style="width:100%; max-width:280px; border-radius:8px; display:block;"></a>` : '<div class="empty">Foto tidak tersedia</div>'}
+      </div>
+    `;
+  }).join('');
 }
 
 function renderHistory(logs) {
@@ -1137,6 +1177,7 @@ async function fetchAll() {
     renderMap(devices);
     renderUsers(users, devices);
     renderHistory(logs);
+    renderSecurityAlerts(devices);
     document.getElementById('last-update').textContent = 'Update: ' + new Date().toLocaleTimeString();
   } catch (err) { console.error(err); }
 }
