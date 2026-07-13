@@ -721,6 +721,23 @@ async function deleteAllLogsForDevice(deviceId, event) {
   } catch (err) { showToast('Gagal hapus: ' + err.message); }
 }
 
+async function deleteSecurityAlert(deviceId, alertId) {
+  try {
+    await authFetch(`/devices/${deviceId}/security_alerts/${alertId}.json`, { method: 'DELETE' });
+    showToast('Foto peringatan dihapus');
+    fetchAll();
+  } catch (err) { showToast('Gagal hapus: ' + err.message); }
+}
+
+async function deleteAllSecurityAlertsForDevice(deviceId) {
+  if (!confirm(`Hapus SEMUA peringatan keamanan untuk ${deviceId}?`)) return;
+  try {
+    await authFetch(`/devices/${deviceId}/security_alerts.json`, { method: 'DELETE' });
+    showToast('Semua peringatan device ini dihapus');
+    fetchAll();
+  } catch (err) { showToast('Gagal hapus: ' + err.message); }
+}
+
 function renderSecurityAlerts(devices) {
   const div = document.getElementById('security-alerts-list');
   const ids = Object.keys(devices || {});
@@ -753,6 +770,10 @@ function renderSecurityAlerts(devices) {
         </div>
         <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">${a.reason || 'Percobaan keluar dari layar kunci'}</div>
         ${a.photo_url ? `<a href="${a.photo_url}" target="_blank" rel="noopener"><img src="${a.photo_url}" alt="Foto keamanan" style="width:100%; max-width:280px; border-radius:8px; display:block;"></a>` : '<div class="empty">Foto tidak tersedia</div>'}
+        <div class="actions" style="margin-top:10px;">
+          <button style="background:transparent; border:1px solid rgba(193,68,59,0.45); color:var(--danger);" onclick="deleteSecurityAlert('${a.devId}','${a.alertId}')">🗑️ Hapus Foto Ini</button>
+          <button style="background:transparent; border:1px solid var(--border); color:var(--text-muted);" onclick="deleteAllSecurityAlertsForDevice('${a.devId}')">Hapus Semua Milik Device</button>
+        </div>
       </div>
     `;
   }).join('');
