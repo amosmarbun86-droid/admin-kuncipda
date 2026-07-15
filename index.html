@@ -714,6 +714,7 @@ function renderDevices(devices) {
         </div>
         <div class="row"><span>Asset</span><b>${(d.info || {}).asset_tag || '-'}</b></div>
         <div class="row"><span>Battery</span><b>${status.battery_level != null ? status.battery_level + '%' : '-'}</b></div>
+        <div class="row"><span>GPS</span><b style="color:${status.gps_enabled===true?'#3FA772':status.gps_enabled===false?'#C1443B':'#8B92A6'};">${status.gps_enabled===true?'🟢 GPS ON':status.gps_enabled===false?'🔴 GPS OFF':'⚪ UNKNOWN'}</b></div>
         <div class="row">
     <span>Online</span>
     <b>${
