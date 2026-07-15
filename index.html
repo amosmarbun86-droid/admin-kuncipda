@@ -313,6 +313,18 @@
     <div class="section-title">Daftar Staff</div>
     <div id="user-list"></div>
 
+    <div class="section-title">Update Aplikasi</div>
+    <div id="app-update-panel" class="request-card">
+      <div id="app-update-current" style="font-family:var(--font-mono); font-size:0.78rem; color:var(--text-muted); margin-bottom:14px;">Memuat info versi...</div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <input id="update-version-code" type="number" placeholder="Version code baru (contoh: 2)" class="login-input" style="margin-bottom:0;">
+        <input id="update-apk-url" type="text" placeholder="Link langsung ke file .apk" class="login-input" style="margin-bottom:0;">
+        <textarea id="update-changelog" placeholder="Changelog (opsional)" style="width:100%; min-height:70px; padding:10px; border-radius:7px; border:1px solid var(--border); background:var(--bg-elevated); color:var(--text); font-family:'Inter',sans-serif; font-size:0.85rem; resize:vertical;"></textarea>
+        <button onclick="publishAppUpdate()" style="padding:11px; border-radius:7px; border:none; background:var(--accent); color:#1A1204; font-weight:600; cursor:pointer;">Terbitkan Update</button>
+      </div>
+      <div class="map-hint" style="margin-top:10px;">Semua device akan otomatis mengunduh APK ini di background begitu terbit. Staff cukup tap "Install" sekali saat notifikasi download muncul.</div>
+    </div>
+
     <div class="section-title">Riwayat Penggunaan</div>
     <div id="history-list"></div>
 
@@ -615,6 +627,47 @@ async function forceCheckin(deviceId){
 
 }
 
+async function publishAppUpdate() {
+  const versionCode = parseInt(document.getElementById('update-version-code').value, 10);
+  const apkUrl = document.getElementById('update-apk-url').value.trim();
+  const changelog = document.getElementById('update-changelog').value.trim();
+
+  if (!versionCode || versionCode <= 0) { showToast('Version code tidak valid'); return; }
+  if (!apkUrl) { showToast('Link APK belum diisi'); return; }
+
+  try {
+    await authFetch(`/app_update.json`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        version_code: versionCode,
+        apk_url: apkUrl,
+        changelog: changelog,
+        published_at: Date.now()
+      })
+    });
+    showToast(`Update v${versionCode} diterbitkan, device akan mulai unduh otomatis`);
+    document.getElementById('update-version-code').value = '';
+    document.getElementById('update-apk-url').value = '';
+    document.getElementById('update-changelog').value = '';
+    fetchAll();
+  } catch (err) { showToast('Gagal terbitkan update: ' + err.message); }
+}
+
+function renderAppUpdatePanel(appUpdate) {
+  const div = document.getElementById('app-update-current');
+  if (!appUpdate || !appUpdate.version_code) {
+    div.innerHTML = 'Belum ada update yang pernah diterbitkan.';
+    return;
+  }
+  div.innerHTML = `
+    Versi terbit saat ini: <b style="color:var(--accent-text);">v${appUpdate.version_code}</b><br>
+    Diterbitkan: ${fmtTime(appUpdate.published_at)}<br>
+    ${appUpdate.changelog ? `Changelog: ${appUpdate.changelog}` : ''}
+  `;
+}
+
+
 function renderDevices(devices) {
   const ids = Object.keys(devices || {});
   const flaggedDiv = document.getElementById('flagged-list');
@@ -684,6 +737,21 @@ function renderDevices(devices) {
     <span>Last Seen</span>
     <b>${fmtTime(status.last_seen)}</b>
 </div>
+      <div class="row">
+    <span>Versi App</span>
+    <b>${
+        (() => {
+            const installed = status.app_version_code;
+            const latest = Number(lastAppUpdate.version_code || 0);
+            const nameLabel = status.app_version_name ? ` (${status.app_version_name})` : '';
+            if (installed == null) return '-';
+            if (latest > 0 && Number(installed) < latest) {
+                return `⚠️ v${installed}${nameLabel} — update tersedia`;
+            }
+            return `✅ v${installed}${nameLabel}`;
+        })()
+    }</b>
+</div>
         ${mapThumb}
         ${isInUse ? `<div class="holder-banner">📌 Dipakai: <b>${status.current_user || 'Unknown'}</b>${status.employeeId ? ` <span style="color:var(--text-muted); font-weight:400;">(${status.employeeId})</span>` : ''}</div>` : ''}
         ${isLocked && status.lock_message ? `<div style="margin-top:8px; padding:10px 12px; background:var(--danger-dim); border:1px solid rgba(193,68,59,0.3); border-radius:7px; font-size:0.8rem; color:#F0A8A2;">📨 ${status.lock_message}</div>` : ''}
@@ -710,6 +778,7 @@ function renderDevices(devices) {
 let lastDevices = {};
 let lastUsers = {};
 let lastLogs = {};
+let lastAppUpdate = {};
 
 async function setNickname(id) {
   const current = (lastDevices[id] && lastDevices[id].info && lastDevices[id].info.nickname) || '';
@@ -1210,11 +1279,12 @@ function exportPDF() {
 
 async function fetchAll() {
   try {
-    const [devRes, userRes, reqRes, logRes] = await Promise.all([
+    const [devRes, userRes, reqRes, logRes, appUpdateRes] = await Promise.all([
       authFetch(`/devices.json`),
       authFetch(`/users.json`),
       authFetch(`/requests.json`),
-      authFetch(`/logs.json`)
+      authFetch(`/logs.json`),
+      authFetch(`/app_update.json`)
     ]);
 
     // Kalau Firebase menolak (mis. permission denied), jangan anggap responsnya
@@ -1231,6 +1301,8 @@ async function fetchAll() {
     lastUsers = users || {};
     const logs = await safeJson(logRes);
     lastLogs = logs || {};
+    lastAppUpdate = await safeJson(appUpdateRes);
+    renderAppUpdatePanel(lastAppUpdate);
     renderRequests(await safeJson(reqRes));
     renderDevices(devices);
     renderMap(devices);
