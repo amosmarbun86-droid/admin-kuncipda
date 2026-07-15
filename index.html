@@ -168,6 +168,15 @@
         .badge.available { background: var(--success-dim); color: var(--success); border-color: rgba(63,167,114,0.3); }
         .badge.inuse { background: var(--warning-dim); color: var(--warning); border-color: rgba(214,138,60,0.3); }
         .badge.locked { background: var(--danger-dim); color: var(--danger); border-color: rgba(193,68,59,0.3); }
+        .badge.online { background: var(--success-dim); color: var(--success); border-color: rgba(63,167,114,0.3); }
+        .badge.offline { background: rgba(139,146,166,0.12); color: var(--text-muted); border-color: var(--border); }
+
+        .presence-dot {
+          display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+          margin-right: 5px; vertical-align: middle;
+        }
+        .presence-dot.online { background: var(--success); box-shadow: 0 0 6px var(--success); }
+        .presence-dot.offline { background: var(--text-faint); box-shadow: none; }
 
         .device-card:has(.badge.inuse) { border-left-color: var(--warning); }
         .device-card:has(.badge.locked) { border-left-color: var(--danger); }
@@ -620,6 +629,10 @@ function renderDevices(devices) {
     const pendingCmd = status.command && status.command !== 'NONE';
     const nickname = (d.info || {}).nickname;
 
+    // Status online real-time (ditulis device lewat Firebase Presence).
+    // null = belum pernah lapor sama sekali (APK lama / belum pernah connect).
+    const isOnline = typeof status.online === 'boolean' ? status.online : null;
+
     const loc = d.location || {};
     const lat = parseCoord(loc.lat);
     const lng = parseCoord(loc.lng);
@@ -635,7 +648,9 @@ function renderDevices(devices) {
       <div class="device-card">
         <div class="device-top">
           <div>
-            <div class="device-id">${nickname ? nickname : id}</div>
+            <div class="device-id">
+              <span class="presence-dot ${isOnline === false ? 'offline' : 'online'}" ${isOnline === null ? 'style="background:var(--text-faint); box-shadow:none;"' : ''}></span>${nickname ? nickname : id}
+            </div>
             ${nickname ? `<div style="font-size:0.7rem; color:var(--text-faint);">${id}</div>` : ''}
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
@@ -650,17 +665,17 @@ function renderDevices(devices) {
     <span>Online</span>
     <b>${
         (() => {
+            // status.online ditulis langsung oleh device lewat Firebase Presence
+            // (.info/connected + onDisconnect), jadi ini status real-time asli
+            // dari server, bukan tebakan dari selisih waktu lagi.
+            if (typeof status.online === 'boolean') {
+                return status.online ? "🟢 ONLINE" : "🔴 OFFLINE";
+            }
+            // Fallback untuk device lama yang APK-nya belum diupdate.
             const last = Number(status.last_seen || 0);
             const diff = Date.now() - last;
-
-            if (last === 0) {
-                return "⚫ UNKNOWN";
-            }
-
-            if (diff < 60000) {
-                return "🟢 ONLINE";
-            }
-
+            if (last === 0) return "⚫ UNKNOWN";
+            if (diff < 60000) return "🟢 ONLINE";
             return "🔴 OFFLINE";
         })()
     }</b>
@@ -1222,7 +1237,10 @@ async function fetchAll() {
     renderUsers(users, devices);
     renderHistory(logs);
     renderSecurityAlerts(devices);
-    document.getElementById('last-update').textContent = 'Update: ' + new Date().toLocaleTimeString();
+    const devIdsForCount = Object.keys(devices || {});
+    const onlineCount = devIdsForCount.filter(id => (devices[id].status || {}).online === true).length;
+    document.getElementById('last-update').textContent =
+      `Update: ${new Date().toLocaleTimeString()} · 🟢 ${onlineCount}/${devIdsForCount.length} device online`;
   } catch (err) { console.error(err); }
 }
 
